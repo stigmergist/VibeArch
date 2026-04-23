@@ -9,7 +9,7 @@
 
 ## Scope
 
-Primary implementation: `_parse_and_validate()` in `backend/app/main.py`
+Primary implementation: `parse_and_validate()` in `backend/src/lib.rs`
 
 ## Responsibilities
 
@@ -19,7 +19,7 @@ Primary implementation: `_parse_and_validate()` in `backend/app/main.py`
 
 ## Dependencies
 
-- Python standard library (`json`)
+- `serde_json`
 - [Chat API](chat-api.md)
 - [Connection Manager](connection-manager.md)
 
@@ -27,7 +27,7 @@ Primary implementation: `_parse_and_validate()` in `backend/app/main.py`
 
 - Validation rules are encoded in code constants but not exposed as a formal contract.
 - There is no rate limiting layered on top of the size/shape checks.
-- No committed automated test suite currently protects edge cases.
+- Coverage exists in shared backend unit tests and smoke tests, but there is still no dedicated contract test suite protecting all edge cases.
 
 ## Recommended Actions
 

@@ -1,39 +1,69 @@
-# Simple Chat App (React + Python)
+# Simple Chat App (React + Rust)
 
 A minimal real-time chat application with:
 - React frontend (Vite)
-- Python backend (FastAPI + WebSocket)
+- Rust backend handlers that run through AWS Lambda/SAM locally and in AWS
 
 ## Project structure
 
 - `frontend/` React chat UI
-- `backend/` FastAPI server with chat WebSocket endpoint
+- `backend/` shared Rust backend crate for the Lambda auth and websocket handlers
 - `arch/` architecture wiki and decision log
 
 ## Run locally
 
-### 1. Start backend
+The only supported local backend path is the AWS-targeted local stack.
+
+### 1. Install local prerequisites
+
+```bash
+python3 -m venv .sam-venv
+./.sam-venv/bin/pip install --upgrade pip
+./.sam-venv/bin/pip install aws-sam-cli
+cargo install cargo-lambda
+```
+
+### 2. Start local DynamoDB
 
 ```bash
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+make local-dynamodb-up
+make local-dynamodb-init
 ```
 
-Backend endpoints:
-- Health check: `http://localhost:8000/health`
-- Register: `http://localhost:8000/auth/register`
-- Login: `http://localhost:8000/auth/login`
-- Logout: `http://localhost:8000/auth/logout`
-- Chat socket: `ws://localhost:8000/ws/chat`
+### 3. Build and start the local AWS stack
 
-Backend auth/session settings:
-- `SESSION_TTL_SECONDS`: session lifetime in seconds. Default: `3600`.
-- `ALLOWED_ORIGINS`: comma-separated browser origin allowlist for HTTP auth requests and WebSocket upgrades. Defaults: `http://localhost:5173,http://127.0.0.1:5173`.
+Terminal 1:
 
-### 2. Start frontend (new terminal)
+```bash
+cd backend
+make sam-build
+make sam-local-api
+```
+
+Terminal 2:
+
+```bash
+cd backend
+make sam-local-ws-gateway
+```
+
+Local endpoints:
+- Auth API: `http://127.0.0.1:3000/auth/*`
+- Chat socket: `ws://127.0.0.1:3001/ws/chat`
+
+### 3a. Run the local smoke test
+
+With DynamoDB Local, `sam local start-api`, and the local websocket gateway running:
+
+```bash
+cd backend
+make sam-local-smoke
+```
+
+This registers a fresh user against the local SAM auth API, connects to the local websocket gateway with the returned token, sends a chat message, and asserts the echoed chat envelope.
+
+### 4. Start frontend (new terminal)
 
 ```bash
 cd frontend
@@ -44,43 +74,60 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-Production direction:
-- Container-first deployment target for both frontend and backend.
-- Baseline Dockerfiles and a local `docker compose` workflow are now included.
+## AWS Deployment Direction
 
-## Run with Docker Compose
+The repo now treats the AWS-targeted handler code as the only supported backend path for local development and deployment.
 
-```bash
-docker compose up --build
-```
+For an AWS pay-per-use deployment, the backend needs to move to AWS-native serverless primitives:
+- S3 + CloudFront for the frontend
+- API Gateway HTTP API + Lambda for `POST /auth/register`, `POST /auth/login`, and `POST /auth/logout`
+- API Gateway WebSocket API + Lambda for `$connect`, `$disconnect`, and chat message routes
+- DynamoDB for users, sessions, and active WebSocket connection records
 
-Open `http://localhost:5173`.
-
-Container notes:
-- The frontend container serves the built app on port `5173` via Nginx.
-- The backend container serves FastAPI on port `8000`.
-- The compose file builds the frontend with `VITE_CHAT_WS_URL=ws://localhost:8000/ws/chat` so the browser can reach the backend through the host-mapped port.
-- The compose file also injects `ALLOWED_ORIGINS` and `SESSION_TTL_SECONDS` into the backend container.
-- If you change `VITE_CHAT_WS_URL`, rebuild the frontend image.
+The implementation target and migration notes live in `infra/aws/README.md`.
 
 Frontend environment contract:
 - `VITE_CHAT_WS_URL`: full websocket URL used by the browser client.
-- Local default/example: `ws://localhost:8000/ws/chat`
+- Local default/example: `ws://127.0.0.1:3001/ws/chat`
 - Production example: `wss://chat.example.com/ws/chat`
-- The frontend derives its auth API base URL from this value by switching `ws` -> `http` and replacing the trailing `/ws/chat` with `/auth`.
-- Deployment contract: the configured websocket URL must point at the same backend that serves `POST /auth/register` and `POST /auth/login`.
+- `VITE_AUTH_BASE_URL`: optional explicit auth API base URL.
+- Local default/example: `http://127.0.0.1:3000/auth`
+- If `VITE_AUTH_BASE_URL` is unset, the frontend derives the auth API base URL from `VITE_CHAT_WS_URL` by switching `ws` -> `http` and replacing the trailing `/ws/chat` with `/auth`.
+- Deployment contract: set `VITE_AUTH_BASE_URL` when the HTTP auth API and WebSocket API do not share the same public base URL.
+
+## AWS Scaffold
+
+The repository now includes the first AWS serverless scaffold:
+- `infra/aws/template.yaml`: AWS SAM template for S3, DynamoDB, HTTP API, WebSocket API, and Lambda wiring.
+- `backend/`: the single Rust backend crate now contains the shared AWS handlers, Lambda binaries, a local DynamoDB bootstrap utility, and a small local websocket gateway that emulates the API Gateway websocket surface for development.
+
+Current implementation status:
+- There is now one backend codebase rather than separate local and AWS backend crates.
+- Shared validation, password hashing, session persistence, connection persistence, and websocket fan-out live in the main backend crate.
+- Local auth runs through `sam local start-api`.
+- Local websocket chat runs through the same shared AWS handler logic behind the local websocket gateway.
+
+Build prerequisite:
+- `backend/Makefile` expects `cargo-lambda` to be installed for Linux `bootstrap` builds.
+
+Local/AWS backend shape:
+- Local auth API: `sam local start-api`
+- Local websocket gateway: `cargo run --bin local_gateway`
+- AWS Lambda binaries from the same crate: `auth`, `ws_connect`, `ws_disconnect`, `ws_message`
+- SAM now builds from `backend/`, so the code you deploy to AWS lives in the same crate you run locally.
 
 ## How it works
 
 - User creates an account or signs in from the frontend; the backend returns an in-memory session token with a fixed expiry timestamp.
-- Frontend opens a WebSocket connection to `VITE_CHAT_WS_URL?token=...` and falls back to `ws://localhost:8000/ws/chat` when the env var is unset.
-- Backend only accepts HTTP auth requests and WebSocket upgrades from configured allowed browser origins.
+- Frontend opens a WebSocket connection to `VITE_CHAT_WS_URL?token=...` and falls back to `ws://127.0.0.1:3001/ws/chat` when the env var is unset.
+- Backend only accepts HTTP auth requests and websocket connections through the AWS-local path.
 - Client sends `{ text }` payloads only.
 - Backend authenticates the socket from the session token and stamps `sender` from the authenticated identity.
 - Frontend can sign out by calling `POST /auth/logout` with `Authorization: Bearer <token>`.
 - Backend rejects any client payload that tries to send its own `sender` field.
 - Backend broadcasts each valid message to all connected clients.
 - Join/leave events are sent as system messages.
+- AWS Lambda deployment and local SAM development both use the shared DynamoDB-backed handler module.
 
 ## Automated Checks
 
@@ -88,5 +135,5 @@ Backend auth/session lifecycle coverage:
 
 ```bash
 cd backend
-./.venv/bin/python -m unittest tests.test_auth
+cargo test
 ```

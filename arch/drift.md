@@ -10,21 +10,23 @@
 
 - Intended: runtime configuration should be environment-aware.
   - Observed (resolved 2026-04-23): frontend now reads `VITE_CHAT_WS_URL` in `frontend/src/App.jsx` and falls back to the local default when unset.
-  - Observed (extended 2026-04-23): backend now also reads `ALLOWED_ORIGINS` and `SESSION_TTL_SECONDS`, and `compose.yaml` injects those values for local container runs.
-  - Remaining gap: deployment-time env injection conventions beyond the current frontend socket contract and backend auth/session settings are still incomplete.
+  - Observed (extended 2026-04-23): frontend now also supports explicit `VITE_AUTH_BASE_URL` override for AWS deployments where auth and websocket endpoints differ.
+  - Observed (extended 2026-04-23): backend now also reads `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings across the shared runtime.
+  - Remaining gap: deployment-time env injection conventions beyond the current frontend socket/auth contract and backend auth/session settings are still incomplete.
   - Status: 🟡 partially resolved.
 
 - Intended: sender identity should be server-owned after authentication.
-  - Observed (resolved 2026-04-23): `POST /auth/register` and `POST /auth/login` now mint in-memory session tokens, `WS /ws/chat` requires `?token=...`, and `backend/app/main.py` rejects any client-supplied `sender` while stamping outbound messages from the authenticated display name.
+  - Observed (resolved 2026-04-23): `POST /auth/register` and `POST /auth/login` now mint fixed-expiry session tokens, `WS /ws/chat` requires `?token=...`, and the shared backend path rejects any client-supplied `sender` while stamping outbound messages from the authenticated display name.
   - Status: 🟢 fully resolved.
 
 - Intended: sessions should be bounded, revocable, and restricted to configured browser origins.
-  - Observed (resolved 2026-04-23): sessions now have a fixed TTL, `POST /auth/logout` revokes tokens, backend CORS is narrowed to `ALLOWED_ORIGINS`, and WebSocket upgrades reject disallowed `Origin` headers. `backend/tests/test_auth.py` covers expiry, logout revocation, and origin enforcement.
-  - Remaining gap: sessions are still process-local, with no refresh/rotation strategy or persistence across restarts.
+  - Observed (resolved 2026-04-23): sessions now have a fixed TTL, `POST /auth/logout` revokes tokens, backend CORS is narrowed to `ALLOWED_ORIGINS`, and WebSocket upgrades reject disallowed `Origin` headers. `backend/tests/auth_lifecycle.rs` covers expiry, logout revocation, and origin enforcement.
+  - Observed (extended 2026-04-23): the supported SAM-local and AWS handler path now persists sessions in DynamoDB or DynamoDB Local.
+  - Remaining gap: there is still no refresh/rotation strategy, and the Axum helper path used in tests remains process-local.
   - Status: 🟡 partially resolved.
 
 - Intended: websocket handlers should fail safely and clean up reliably.
-  - Observed (resolved 2026-04-23): Three-layer exception handling: inner try/except guards payload validation, middle try/except catches `WebSocketDisconnect` gracefully, outer try/except/finally catches broad `Exception` and guarantees cleanup. Disconnect is always called, and failure to broadcast leave message is logged but doesn't crash.
+  - Observed (resolved 2026-04-23): shared handler code now deletes persisted connection records during disconnect handling, and the local gateway also clears transient peer senders after socket termination.
   - Status: 🟢 fully resolved.
 
 - Intended: clients should recover gracefully from transient socket loss or backend restarts.
@@ -38,9 +40,14 @@
   - Proposed correction: define message envelope schema and versioning strategy in docs and code.
 
 - Intended: production deployability should be repeatable and automated.
-  - Observed: repository now has Dockerfiles and a local `docker compose` workflow, but it still has no CI workflow definitions or production deployment manifests.
-  - Impact: local containerized execution is aligned with the architecture target, but production promotion and environment consistency remain underdefined.
-  - Proposed correction: add CI pipeline, production deployment manifests, and runtime hardening on top of the compose baseline.
+  - Observed: repository now has `infra/aws/template.yaml`, a working local SAM workflow, a local websocket gateway, and shared Lambda handlers inside `backend/`; the old direct local backend path is no longer the supported runtime, but production still lacks deploy automation, secrets handling, and real AWS deployment validation.
+  - Impact: the supported local backend path now matches the AWS-oriented code path, but production rollout remains incomplete.
+  - Proposed correction: standardize SAM build/deploy automation, add CI-backed validation, and run deployed smoke tests.
+
+- Intended: production backend billing should align closely with real usage through AWS Lambda.
+  - Observed: the shared backend crate now contains DynamoDB-backed Lambda auth/session/connection handlers and API Gateway Management API fan-out, and the supported local backend path now runs through SAM plus the local websocket gateway shim.
+  - Impact: the pay-per-use production model is now implementable, but it still needs deployment validation and cost guardrails before being treated as production-ready.
+  - Proposed correction: validate the deployed Lambda path and add cost monitoring/budgets.
 
 - Intended: operational behavior should be observable.
   - Observed: backend now emits basic application log messages for rejected payloads and unexpected runtime exceptions, but no structured logging, metrics, or alert hooks exist.

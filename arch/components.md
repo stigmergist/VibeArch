@@ -1,6 +1,6 @@
 # Components
 
-This page is the high-level component map for the repository. Per-component detail lives in [component-details/frontend-ui.md](component-details/frontend-ui.md), [component-details/frontend-styling.md](component-details/frontend-styling.md), [component-details/chat-api.md](component-details/chat-api.md), [component-details/payload-validator.md](component-details/payload-validator.md), [component-details/connection-manager.md](component-details/connection-manager.md), and [component-details/build-runtime-tooling.md](component-details/build-runtime-tooling.md).
+This page is the high-level component map for the repository. Per-component detail lives in [component-details/frontend-ui.md](component-details/frontend-ui.md), [component-details/frontend-styling.md](component-details/frontend-styling.md), [component-details/chat-api.md](component-details/chat-api.md), [component-details/payload-validator.md](component-details/payload-validator.md), [component-details/connection-manager.md](component-details/connection-manager.md), [component-details/build-runtime-tooling.md](component-details/build-runtime-tooling.md), and [component-details/aws-serverless-platform.md](component-details/aws-serverless-platform.md).
 
 ## [Frontend UI](component-details/frontend-ui.md)
 
@@ -26,8 +26,8 @@ High-level relationships:
 ## [Chat API](component-details/chat-api.md)
 
 Summary:
-- FastAPI websocket and health endpoint implementation in `backend/app/main.py`.
-- Orchestrates registration/login, session lookup, validation, connection lifecycle handling, and outbound message broadcast.
+- Shared auth and chat orchestration surface spanning `backend/src/aws_lambda.rs` and shared helpers in `backend/src/lib.rs`.
+- Owns register/login/logout, session lookup, payload validation, connection lifecycle handling, and outbound message broadcast across local and AWS execution paths.
 
 High-level relationships:
 - Depends on [Payload Validator](component-details/payload-validator.md) for inbound protocol hardening.
@@ -38,7 +38,7 @@ High-level relationships:
 ## [Payload Validator](component-details/payload-validator.md)
 
 Summary:
-- Protocol-hardening helper `_parse_and_validate()` in `backend/app/main.py`.
+- Protocol-hardening helper `parse_and_validate()` in `backend/src/lib.rs`.
 - Encodes message size, shape, type, and normalization rules before messages enter the chat flow.
 
 High-level relationships:
@@ -48,8 +48,8 @@ High-level relationships:
 ## [Connection Manager](component-details/connection-manager.md)
 
 Summary:
-- Process-local websocket registry and broadcast helper inside `backend/app/main.py`.
-- Owns fan-out behavior and dead-connection cleanup within a single process.
+- DynamoDB-backed connection tracking plus the local websocket gateway peer map used to emulate API Gateway Management API behavior.
+- Owns fan-out behavior and stale/dead-connection cleanup across the supported local and AWS-oriented paths.
 
 High-level relationships:
 - Used by [Chat API](component-details/chat-api.md) for connect/disconnect/broadcast flow.
@@ -58,12 +58,24 @@ High-level relationships:
 ## [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 
 Summary:
-- Local build and runtime surface spanning `compose.yaml`, frontend/backend Dockerfiles, and the app dependency manifests.
-- Governs how configuration, packaging, CI, and operational tooling will be introduced.
+- Local build and runtime surface spanning the SAM workflow, DynamoDB Local compose file, frontend tooling, backend Cargo manifests, and AWS infrastructure docs.
+- Governs configuration, packaging, CI, and operational tooling for the supported AWS-local and AWS deployment paths.
 
 High-level relationships:
 - Enables environment/configuration needs for [Frontend UI](component-details/frontend-ui.md) and [Chat API](component-details/chat-api.md).
 - Enables deployment, observability, and scale-path work for [Connection Manager](component-details/connection-manager.md).
+
+## [AWS Serverless Platform](component-details/aws-serverless-platform.md)
+
+Summary:
+- Target production deployment shape for AWS pay-per-use hosting.
+- Current scaffold lives in `infra/aws/template.yaml` and the shared `backend/` crate.
+- Replaces the current always-on backend process assumption with API Gateway, Lambda, and DynamoDB responsibilities.
+
+High-level relationships:
+- Pulls configuration and deployment concerns out of [Build And Runtime Tooling](component-details/build-runtime-tooling.md) into an AWS-specific runtime model.
+- Forces [Chat API](component-details/chat-api.md) and [Connection Manager](component-details/connection-manager.md) to move from process-local behavior to event-driven and persistent state handling.
+- Defines the production hosting boundary consumed by [Frontend UI](component-details/frontend-ui.md).
 
 ## Navigation
 

@@ -26,6 +26,10 @@ __pycache__/
 .mypy_cache/
 .venv/
 venv/
+.sam-venv/
+
+# Rust
+target/
 
 # IDE
 .vscode/*

@@ -1,0 +1,9 @@
+{
+  "requestContext": {
+    "routeKey": "$disconnect",
+    "eventType": "DISCONNECT",
+    "connectionId": "local-connection-1",
+    "domainName": "example.execute-api.local",
+    "stage": "local"
+  }
+}

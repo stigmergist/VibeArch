@@ -1,5 +1,46 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 21)
+
+- Removed stale references to the deleted `compose.yaml` path and the no-longer-supported direct local backend runtime from the architecture wiki.
+- Re-synced system, component, drift, and risk docs to the actual runtime surface: DynamoDB Local, `sam local start-api`, `backend/src/aws_lambda.rs`, and `backend/src/bin/local_gateway.rs`.
+- Updated the architecture scorecards and action lists so remaining work now focuses on deployed AWS validation, serverless fan-out limits, and operational hardening rather than unfinished local runtime migration.
+
+## 2026-04-23 (update 20)
+
+- Synced the wiki to the now-working SAM-local validation path: `backend/tests/aws_local_smoke.rs`, `make sam-local-smoke`, and the browser-verified Vite-to-SAM auth/websocket flow.
+- Updated the AWS serverless and top-level architecture docs to remove stale assumptions about the old direct local backend path and to describe the local websocket gateway plus local DynamoDB-backed handler defaults.
+- Re-ranked next steps toward deployed AWS validation, broader automation, and operational hardening now that local SAM auth and websocket smoke coverage exists.
+
+## 2026-04-23 (update 19)
+
+- Synced the wiki to the DynamoDB-backed Lambda implementation now living in `backend/src/aws_lambda.rs`, including persisted auth/session/connection state and API Gateway Management API fan-out.
+- Updated the AWS docs and architecture pages to reflect the preserved frontend websocket contract via the `$default` route and the new local SAM workflow assets.
+- Re-ranked next steps, risks, and drift to focus on SAM validation, deploy automation, observability, and production smoke testing rather than missing Lambda persistence scaffolding.
+
+## 2026-04-23 (update 18)
+
+- Collapsed the separate `backend-lambda/` crate into the main `backend/` crate so local Axum and AWS Lambda entry points now share one backend codebase.
+- Updated the SAM references, implementation targets, and deployability notes across the wiki to point at the unified `backend/` crate.
+
+## 2026-04-23 (update 17)
+
+- Synced the wiki to the new AWS implementation scaffold: `infra/aws/template.yaml`, `backend-lambda/`, and the explicit frontend `VITE_AUTH_BASE_URL` contract.
+- Updated next steps, risks, drift, and system overview so the AWS target is described as partially scaffolded rather than documentation-only.
+- Re-ranked AWS follow-up work around DynamoDB-backed handlers, API Gateway Management API fan-out, and CI/SAM build automation.
+
+## 2026-04-23 (update 16)
+
+- Switched the documented production target from container-first to AWS serverless and added ADR-012 for Lambda + API Gateway + DynamoDB.
+- Added `infra/aws/README.md` plus an `AWS Serverless Platform` component page to document the migration target and its constraints.
+- Updated risks, drift, next steps, README, and system overview to reflect that the current Axum runtime is not directly deployable to Lambda.
+
+## 2026-04-23 (update 15)
+
+- Replaced the documented backend runtime from Python/FastAPI to Rust/Axum and updated component/detail docs to point at `backend/src/lib.rs` and Cargo-based tooling.
+- Added ADR-011 to record the backend runtime migration and marked ADR-002 as superseded.
+- Updated README local run and automated check instructions to use Cargo rather than Python tooling.
+
 ## 2026-04-23 (update 14)
 
 - Synced the wiki to the hardened auth/session lifecycle: fixed session expiry, `POST /auth/logout`, configured origin restrictions, and backend auth lifecycle tests.

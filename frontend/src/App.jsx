@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const socketUrl = import.meta.env.VITE_CHAT_WS_URL || 'ws://localhost:8000/ws/chat';
-const authBaseUrl = socketUrl.replace(/^ws/i, 'http').replace(/\/ws\/chat$/, '/auth');
+const authBaseUrl =
+  import.meta.env.VITE_AUTH_BASE_URL || socketUrl.replace(/^ws/i, 'http').replace(/\/ws\/chat$/, '/auth');
 
 function formatTime(iso) {
   const date = new Date(iso);

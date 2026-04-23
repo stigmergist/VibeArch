@@ -1,0 +1,10 @@
+{
+  "requestContext": {
+    "routeKey": "$default",
+    "eventType": "MESSAGE",
+    "connectionId": "local-connection-1",
+    "domainName": "example.execute-api.local",
+    "stage": "local"
+  },
+  "body": "{\"text\":\"hello from sam local\"}"
+}

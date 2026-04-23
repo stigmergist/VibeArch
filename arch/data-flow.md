@@ -6,52 +6,58 @@
 sequenceDiagram
    participant U as User Browser
    participant F as React UI
-   participant A as FastAPI Auth API
-   participant B as FastAPI WebSocket
-   participant M as ConnectionManager
+   participant A as SAM Local Auth API
+   participant G as Local WebSocket Gateway
+   participant L as Shared Lambda Handlers
+   participant D as DynamoDB Local
 
    U->>F: Open app
    U->>F: Register or log in
    F->>A: POST /auth/register or /auth/login
+   A->>L: Invoke auth handler
+   L->>D: Persist user/session
    A-->>F: { token, username, displayName, expiresAt }
-   F->>B: Connect to /ws/chat?token=...
-   B->>M: Register websocket
-   B->>M: Broadcast join system event
+   F->>G: Connect to /ws/chat?token=...
+   G->>L: Invoke $connect handler
+   L->>D: Persist connection
+   L-->>G: Accept and broadcast join event
    U->>F: Submit message
-   F->>B: Send JSON { text }
-   B->>B: Validate and normalize via _parse_and_validate()
-   B->>M: Broadcast message event
-   M-->>F: send_json(payload)
+   F->>G: Send JSON { text }
+   G->>L: Invoke $default handler
+   L->>L: Validate via parse_and_validate()
+   L->>D: Scan active connections
+   L-->>G: Post outbound envelopes
+   G-->>F: send(payload)
 ```
 
 ## Flow: Register Or Login
 
 1. User enters username/password and, for registration, a display name.
-2. Frontend derives the auth base URL from `VITE_CHAT_WS_URL` by switching the scheme from `ws` to `http` and replacing the trailing `/ws/chat` with `/auth`.
+2. Frontend uses `VITE_AUTH_BASE_URL` when present; otherwise it derives the auth base URL from `VITE_CHAT_WS_URL` by switching the scheme from `ws` to `http` and replacing the trailing `/ws/chat` with `/auth`.
 3. Frontend calls `POST /auth/register` or `POST /auth/login`.
-4. Backend validates credentials, creates an in-memory session token with a fixed expiry, and returns `{ token, username, displayName, expiresAt }`.
+4. Backend validates credentials, creates a fixed-expiry session token, persists it in the active runtime store, and returns `{ token, username, displayName, expiresAt }`.
 
 ## Flow: Logout
 
 1. Frontend sends `POST /auth/logout` with `Authorization: Bearer <token>`.
-2. Backend revokes the token from the in-memory session store.
+2. Backend revokes the token from the session store used by the current runtime path.
 3. Future WebSocket connections with that token are rejected.
 
 ## Flow: Client Connect
 
 1. Browser loads frontend and constructs WebSocket client after a session token is available.
-2. Client connects to `ws://localhost:8000/ws/chat?token=...`.
+2. Client connects to `ws://127.0.0.1:3001/ws/chat?token=...` in the supported local workflow.
 3. Backend checks the request `Origin` header against the configured allowlist and rejects the socket with close code `1008` when the origin is not allowed.
-4. Backend looks up the session token, rejects expired or revoked sessions, and closes the socket with code `1008` when auth fails.
-5. Backend accepts authorized sockets and registers the connection.
+4. Shared handler code looks up the session token, rejects expired or revoked sessions, and closes the socket when auth fails.
+5. Shared handler code registers the connection in DynamoDB or DynamoDB Local.
 6. Backend broadcasts a system join event using the authenticated display name.
 
 ## Flow: Send Message
 
 1. User submits message in frontend composer.
 2. Frontend sends JSON payload: `{ text: string }`.
-3. Backend receives text frame and passes it to `_parse_and_validate()`.
-4. If validation fails, backend sends `{ type: "error", text: description, sentAt }` to sender only; loop continues.
+3. Gateway forwards the text frame to the shared `$default` handler, which passes it to `parse_and_validate()`.
+4. If validation fails, backend rejects the frame; the exact error-envelope behavior differs between the local Axum helper path and the Lambda-oriented websocket path.
 5. If `text` is blank after strip, frame is silently discarded; loop continues.
 6. Backend broadcasts normalized message event to all connected clients, stamping sender from the authenticated session:
    - `type: "message"`
@@ -64,13 +70,13 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
    participant F as React UI (sender)
-   participant B as FastAPI WebSocket
+   participant G as Local WebSocket Gateway
+   participant L as Shared Lambda Handler
 
-   F->>B: Send malformed/oversized/invalid frame
-   B->>B: _parse_and_validate() raises ValueError
-   B-->>F: send_json({ type: error, text: description })
-   Note over B: Other clients receive nothing
-   B->>B: Continue receive loop
+   F->>G: Send malformed/oversized/invalid frame
+   G->>L: Forward websocket message event
+   L->>L: parse_and_validate() rejects payload
+   Note over L: Other clients receive nothing
 ```
 
 ## Validation Rules Reference
@@ -89,15 +95,15 @@ sequenceDiagram
 
 ## Flow: Disconnect
 
-1. The WebSocket handler exits because of client disconnect or another runtime failure.
-2. Backend enters the `finally` cleanup path.
-3. Backend removes the client from the in-memory connection registry if still present.
+1. The websocket gateway or API Gateway route exits because of client disconnect or another runtime failure.
+2. Shared handler code removes the connection record from DynamoDB or DynamoDB Local.
+3. Local gateway also removes the transient local peer sender if present.
 4. Backend attempts to broadcast a system leave event to remaining clients.
 5. If leave-message broadcast fails, backend logs the error and preserves cleanup completion.
 
 ## Integration Boundaries
 
 - Frontend <-> Backend boundary: HTTP JSON auth endpoints plus WebSocket JSON chat protocol.
-- Frontend runtime config boundary: `VITE_CHAT_WS_URL` must resolve to the backend `/ws/chat` endpoint; the frontend derives `/auth/*` from that same base.
-- Backend runtime config boundary: `ALLOWED_ORIGINS` and `SESSION_TTL_SECONDS` define browser origin restrictions and session expiry policy.
-- External systems: none.
+- Frontend runtime config boundary: `VITE_CHAT_WS_URL` must resolve to the websocket gateway or deployed WebSocket API; `VITE_AUTH_BASE_URL` may explicitly point at the matching auth API.
+- Backend runtime config boundary: `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings define auth, persistence, and local routing behavior.
+- External systems: DynamoDB Local for supported local runs and DynamoDB/API Gateway in AWS.

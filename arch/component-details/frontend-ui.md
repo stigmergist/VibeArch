@@ -30,7 +30,7 @@ Primary implementation: `frontend/src/App.jsx`
 
 ## Risks And Gaps
 
-- Socket URL is now environment-driven via `VITE_CHAT_WS_URL`, and the UI derives `/auth/*` from that value, so deployment-time value management must stay documented and consistent.
+- Socket URL is now environment-driven via `VITE_CHAT_WS_URL`, and the UI may derive `/auth/*` from that value when `VITE_AUTH_BASE_URL` is unset, so deployment-time value management must stay documented and consistent.
 - There is no reconnect/backoff behavior after socket loss.
 - Session state is not persisted across refresh or explicit logout.
 - Session expiry is enforced by the backend, but the UI has no pre-expiry warning or refresh flow.
@@ -42,7 +42,7 @@ Primary implementation: `frontend/src/App.jsx`
 2. Add integration tests for auth flow, connection lifecycle, and error rendering.
 3. Decide whether session state should survive refresh and whether expiry should surface a clearer UX than forced re-login.
 4. Add `aria-live` handling and keyboard-focused accessibility checks.
-5. Keep the `VITE_CHAT_WS_URL` and derived `/auth/*` contract aligned with deployment documentation and build tooling.
+5. Keep the `VITE_CHAT_WS_URL` and `VITE_AUTH_BASE_URL` contract aligned with deployment documentation and build tooling.
 
 ## Open Questions
 

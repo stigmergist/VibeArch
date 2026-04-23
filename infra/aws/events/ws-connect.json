@@ -1,0 +1,12 @@
+{
+  "requestContext": {
+    "routeKey": "$connect",
+    "eventType": "CONNECT",
+    "connectionId": "local-connection-1",
+    "domainName": "example.execute-api.local",
+    "stage": "local"
+  },
+  "queryStringParameters": {
+    "token": "replace-with-local-session-token"
+  }
+}

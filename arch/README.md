@@ -21,14 +21,17 @@ This wiki is the architecture source of truth for the repository.
 ## Current System Snapshot
 
 - Frontend: React 18 + Vite app in `frontend/`
-- Backend: FastAPI + Uvicorn app in `backend/`
+- Backend: shared Rust crate in `backend/` that contains the Lambda handlers, the local websocket gateway shim, and the shared validation/auth logic reused across local and AWS paths
+- AWS scaffold: `infra/aws/template.yaml` plus `backend/src/aws_lambda.rs` and the Lambda binaries in `backend/src/bin/`
 - Auth/session: `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, fixed-lifetime bearer sessions, and token-authenticated WebSocket chat on `/ws/chat`
-- Persistence: none (ephemeral, in-memory only)
+- Persistence: the supported backend path persists users, sessions, and connection IDs in DynamoDB or DynamoDB Local
+- Supported local backend path: DynamoDB Local + `sam local start-api` + `cargo run --bin local_gateway`
+- Production target direction: AWS serverless with static frontend hosting plus Lambda-backed auth and chat integrations
 
 ## NFR And Deployability Snapshot
 
 - NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/security/manageability/portability/cost/robustness/reliability/fault tolerance/testability/maintainability/privacy and data protection/usability/accessibility, 🔴 weak in observability.
-- Deployability today: strong for local development and local containerized runs, but not production-ready for the chosen container-first deployment target because production manifests, CI, and operational controls are still missing.
+- Deployability today: strong for the supported AWS-local development path and materially closer to the target AWS runtime because local auth and websocket flows now run through the shared Lambda-oriented handlers; production still lacks CI/CD, observability, secrets handling, and deployed validation.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
 ## Recommended Action Index
@@ -41,9 +44,15 @@ This wiki is the architecture source of truth for the repository.
 	- [Payload Validator](component-details/payload-validator.md)
 	- [Connection Manager](component-details/connection-manager.md)
 	- [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
+	- [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 
 ## Completed Recently
 
+- 2026-04-23: Validated the SAM-local auth path end to end from the browser, added a local websocket smoke test, and removed remaining local-runtime assumptions from the shared handler path.
+- 2026-04-23: Chose AWS serverless as the production target and documented the migration gap from the current process-local Axum runtime.
+- 2026-04-23: Implemented the first DynamoDB-backed Lambda auth/session/connection flow and added a SAM local workflow for the shared backend crate.
+- 2026-04-23: Unified the AWS Lambda entry points into the main `backend/` crate so local and AWS backend code now live in one codebase.
+- 2026-04-23: Replaced the Python backend with a Rust Axum backend while preserving the existing auth and WebSocket contract.
 - 2026-04-23: Added fixed-lifetime sessions, logout, origin restrictions, and backend auth lifecycle tests.
 - 2026-04-23: Added baseline Dockerfiles plus a local `docker compose` workflow for the container-first deployment path.
 - 2026-04-23: Added in-memory registration/login session tokens and made chat sender identity server-owned after auth.
