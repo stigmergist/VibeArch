@@ -26,7 +26,7 @@ This wiki is the architecture source of truth for the repository.
 
 ## NFR And Deployability Snapshot
 
-- NFR status summary: good in flexibility, watch in performance/scalability/portability/cost/manageability, weak in security, availability, and resilience.
+- NFR status summary: 🟢 good in flexibility, 🟡 watch in performance/scalability/portability/cost/manageability, 🔴 weak in security, availability, and resilience.
 - Deployability today: strong for local development, partial for cloud VM/manual deploy, not production-ready for managed/containerized operation yet.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 

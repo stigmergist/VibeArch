@@ -16,3 +16,4 @@
 - Added NFR scorecard (Availability, Performance, Scalability, Security, Manageability, Flexibility, Portability, Cost, Resilience) with evidence and remediation.
 - Expanded risk register and drift notes with deployment automation, observability, and portability gaps.
 - Updated architecture priorities to include production deployment baseline work.
+- Added traffic-light icons to NFR summaries and Mermaid diagrams for runtime topology and chat flow.

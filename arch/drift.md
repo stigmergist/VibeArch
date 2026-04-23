@@ -1,5 +1,11 @@
 # Drift
 
+## Quality Status Snapshot
+
+- 🔴 Weak: security, availability, resilience.
+- 🟡 Watch: performance, scalability, manageability, portability, cost.
+- 🟢 Good: flexibility.
+
 ## Intended vs Observed
 
 - Intended: runtime configuration should be environment-aware.

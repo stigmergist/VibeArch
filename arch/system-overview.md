@@ -20,6 +20,16 @@
 - Backend also emits system join/leave messages.
 - Health check is exposed at `GET /health`.
 
+## Runtime Topology
+
+```mermaid
+flowchart LR
+	Browser[Browser Client\nReact + Vite UI] <-->|WebSocket JSON\n/ws/chat| API[FastAPI App\nbackend/app/main.py]
+	Browser -->|HTTP asset requests| Vite[Vite Dev Server]
+	API -->|In-memory state| Manager[ConnectionManager\nprocess-local connection list]
+	Monitor[Operator or Probe] -->|GET /health| API
+```
+
 ## Major Runtime Concerns
 
 - Connection lifecycle management for disconnect/reconnect.
@@ -39,15 +49,15 @@
 
 | Quality | Status | Evidence | Top Remediation |
 |---|---|---|---|
-| Availability | weak | Only in-memory process state; no restart recovery behavior; no health dependency checks beyond static `GET /health` response. | Add process supervision + graceful restart strategy and harden socket exception cleanup.
-| Performance | watch | Broadcast loop sends per-connection sequentially from Python process memory; no throughput limits or profiling. | Add payload limits and basic latency/throughput measurements before feature growth.
-| Scalability | watch | `ConnectionManager` is process-local list; no shared state/pub-sub for multi-instance fan-out. | Introduce Redis pub/sub (or equivalent) for horizontal scale path.
-| Security | weak | No auth; sender identity is client-supplied; no explicit payload size/rate controls. | Add authn/authz boundary and server-owned identity fields with rate/payload guards.
-| Manageability | watch | No CI workflow, no structured logging, no runbook/deployment scripts. | Add CI checks, structured logs, and minimal operational runbook.
-| Flexibility | good | Clean frontend/backend split and simple protocol permit iterative change. | Preserve separation while introducing schema/versioning and env config.
-| Portability | watch | Works locally but socket URL hard-coded to localhost and no container spec exists. | Move URL to env config and add Docker-based runtime packaging.
-| Cost | watch | Low current runtime footprint, but no cost controls/limits for future scaling. | Define deployment sizing defaults and autoscaling/capacity guardrails.
-| Resilience | weak | Non-disconnect websocket errors can bypass explicit cleanup path; no retry/backoff policy documented. | Add exception-safe cleanup, client reconnect/backoff policy, and failure tests.
+| Availability | 🔴 weak | Only in-memory process state; no restart recovery behavior; no health dependency checks beyond static `GET /health` response. | Add process supervision + graceful restart strategy and harden socket exception cleanup. |
+| Performance | 🟡 watch | Broadcast loop sends per-connection sequentially from Python process memory; no throughput limits or profiling. | Add payload limits and basic latency/throughput measurements before feature growth. |
+| Scalability | 🟡 watch | `ConnectionManager` is process-local list; no shared state/pub-sub for multi-instance fan-out. | Introduce Redis pub/sub (or equivalent) for horizontal scale path. |
+| Security | 🔴 weak | No auth; sender identity is client-supplied; no explicit payload size/rate controls. | Add authn/authz boundary and server-owned identity fields with rate/payload guards. |
+| Manageability | 🟡 watch | No CI workflow, no structured logging, no runbook/deployment scripts. | Add CI checks, structured logs, and minimal operational runbook. |
+| Flexibility | 🟢 good | Clean frontend/backend split and simple protocol permit iterative change. | Preserve separation while introducing schema/versioning and env config. |
+| Portability | 🟡 watch | Works locally but socket URL hard-coded to localhost and no container spec exists. | Move URL to env config and add Docker-based runtime packaging. |
+| Cost | 🟡 watch | Low current runtime footprint, but no cost controls/limits for future scaling. | Define deployment sizing defaults and autoscaling/capacity guardrails. |
+| Resilience | 🔴 weak | Non-disconnect websocket errors can bypass explicit cleanup path; no retry/backoff policy documented. | Add exception-safe cleanup, client reconnect/backoff policy, and failure tests. |
 
 ## Deployability Assessment
 

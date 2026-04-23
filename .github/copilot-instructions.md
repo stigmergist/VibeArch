@@ -97,6 +97,18 @@ For each architecture sync or review, include a concise NFR scorecard in the rel
 - Evidence from current code and runtime assumptions
 - Top remediation action per weak/watch quality
 
+When presenting NFR scorecards or quality summaries:
+- Use traffic-light icons for readability when the format supports it:
+   - good = 🟢
+   - watch = 🟡
+   - weak = 🔴
+- Keep the icon and the text label together so meaning is preserved in plain markdown.
+
+When a visual explanation would materially improve understanding:
+- Add concise markdown diagrams, preferably Mermaid, to architecture docs.
+- Prefer diagrams for runtime topology, component boundaries, and important data flows.
+- Keep diagrams evidence-based and simple; do not invent infrastructure or components not supported by the code.
+
 The assessment must be evidence-based from repository code and current documented assumptions, not aspirational design.
 
 ## Quality bar
@@ -118,6 +130,7 @@ When unsure:
 
 - Keep architecture docs concise, navigable, and up to date.
 - Prefer stable, low-entropy summaries over verbose prose.
+- Use visual structure intentionally: tables for scorecards, traffic-light icons for status, and diagrams where they improve comprehension.
 - Treat arch as the architecture source of truth for implementation guidance.
 - Treat code outside arch as the source of truth for what currently exists.
 - Continuously reconcile differences through documented decisions, risks, and drift notes.

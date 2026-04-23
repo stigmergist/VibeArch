@@ -14,6 +14,6 @@
 
 ## NFR Hotspots
 
-- Weak: Security, Availability, Resilience.
-- Watch: Performance, Scalability, Manageability, Portability, Cost.
-- Good: Flexibility.
+- 🔴 Weak: Security, Availability, Resilience.
+- 🟡 Watch: Performance, Scalability, Manageability, Portability, Cost.
+- 🟢 Good: Flexibility.

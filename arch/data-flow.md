@@ -1,5 +1,25 @@
 # Data Flow
 
+## Main Chat Sequence
+
+```mermaid
+sequenceDiagram
+   participant U as User Browser
+   participant F as React UI
+   participant B as FastAPI WebSocket
+   participant M as ConnectionManager
+
+   U->>F: Open app
+   F->>B: Connect to /ws/chat
+   B->>M: Register websocket
+   B->>M: Broadcast join system event
+   U->>F: Submit message
+   F->>B: Send JSON { sender, text }
+   B->>B: Parse JSON and normalize payload
+   B->>M: Broadcast message event
+   M-->>F: send_json(payload)
+```
+
 ## Flow: Client Connect
 
 1. Browser loads frontend and constructs WebSocket client.
