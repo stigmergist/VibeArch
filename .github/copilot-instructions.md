@@ -14,6 +14,7 @@ Primary behavior:
 3. Use the knowledge zone as architecture guardrails when generating code.
 4. Critique the architecture for weak spots and propose improvements.
 5. Assess non-functional architecture qualities and production deployability continuously.
+6. Explain architecture implications in business/customer value language first, then support with technical evidence.
 
 ## Scope rules
 
@@ -90,6 +91,11 @@ For architecture sync tasks:
    - Move actionable recommendations out of incidental prose where practical and into `arch/next-steps.md` plus the relevant `arch/component-details/<component-slug>.md` files.
    - Re-rank global actions in `arch/next-steps.md` and component-local actions in each component detail file.
    - Check that component relationships are cross-linked where useful for navigation.
+7. Apply mandatory visibility cues for scanability in every architecture update/refresh/sync:
+   - Ensure `arch/README.md`, `arch/system-overview.md`, `arch/risks.md`, and `arch/drift.md` each contain a `## Scan First (Traffic Light)` section.
+   - In each `Scan First` section, include exactly 3 bullets in this order: 🔴 Act now, 🟡 Watch closely, 🟢 Stable base.
+   - Ensure `arch/next-steps.md` contains a `## Priority Legend` and traffic-light section headers for priority groups (🔴, 🟡, 🟢).
+   - Keep traffic-light cues concise and action-oriented so a reader can identify top attention areas in under 10 seconds.
 
 For code generation tasks:
 1. Read arch/README.md and relevant architecture docs first.
@@ -101,6 +107,7 @@ For architecture weakness analysis tasks:
 2. Compare against observed code (excluding arch).
 3. Report weaknesses as a prioritized list with:
    - Weak area
+   - Business/customer impact
    - Why it matters
    - Evidence
    - Suggested remediation
@@ -131,6 +138,19 @@ For architecture weakness analysis tasks:
    - What is missing for production deployment (configuration, secrets handling, observability, CI/CD, rollback, capacity planning).
    - Recommended target deployment model and smallest path to production readiness.
 
+## Business Value Framing Rules
+
+For architecture syncs, reviews, and recommendations:
+- Lead with business and customer value language before technical detail.
+- For each major risk or recommendation, state customer impact explicitly (trust, reliability perception, onboarding friction, retention risk, support burden, revenue/cost exposure, time-to-market).
+- For each recommendation, include a value hypothesis: what improves for customers or the business if this is done.
+- Keep technical evidence as proof, not as the opening frame.
+
+Preferred response order when presenting architecture findings:
+1. Customer/business consequence
+2. Recommended action and urgency
+3. Technical evidence and implementation notes
+
 ## Architecture Sync Validation Checklist
 
 Before completing any architecture sync, verify:
@@ -147,6 +167,8 @@ Before completing any architecture sync, verify:
 - [ ] NFR scorecard evidence lines reference actual current code paths or runtime behavior
 - [ ] Change log includes entry for this sync pass with specific file updates and rationale
 - [ ] Change-volume gate has been evaluated; if triggered, `arch/change-log.md` records the trigger signal, review scope, and reprioritized actions
+- [ ] `arch/README.md`, `arch/system-overview.md`, `arch/risks.md`, and `arch/drift.md` include `## Scan First (Traffic Light)` sections with 🔴/🟡/🟢 bullets in the required order
+- [ ] `arch/next-steps.md` includes `## Priority Legend` and traffic-light priority section headers
 
 ## Non-Functional Architecture Requirements
 
@@ -169,6 +191,13 @@ When a visual explanation would materially improve understanding:
 
 The assessment must be evidence-based from repository code and current documented assumptions, not aspirational design.
 
+When presenting NFR status, translate technical quality into customer/business outcomes where possible. Examples:
+- Availability and reliability -> user trust and retention risk
+- Performance and scalability -> response experience and conversion risk
+- Security and privacy -> compliance and brand risk
+- Observability and maintainability -> incident recovery time and delivery speed
+- Cost and portability -> unit economics and strategic flexibility
+
 ## Quality bar
 
 Architecture wiki content should be:
@@ -180,6 +209,7 @@ Architecture wiki content should be:
 - Deployable: clarifies current production readiness and concrete gaps to deploy safely.
 - Current: embedded recommendation lists (for example prioritized next work) are checked for validity and updated when assumptions change.
 - Navigable: component names, architecture files, and related references should be linked where reasonable to reduce dead-end documentation.
+- Value-forward: recommendations clearly describe customer/business impact first, with technical detail as supporting evidence.
 
 When unsure:
 - Mark assumptions clearly.

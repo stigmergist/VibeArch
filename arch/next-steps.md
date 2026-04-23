@@ -2,25 +2,37 @@
 
 This file is the top-level index for recommended architecture work. Component-specific detail lives in [component-details/frontend-ui.md](component-details/frontend-ui.md), [component-details/frontend-styling.md](component-details/frontend-styling.md), [component-details/chat-api.md](component-details/chat-api.md), [component-details/payload-validator.md](component-details/payload-validator.md), [component-details/connection-manager.md](component-details/connection-manager.md), [component-details/build-runtime-tooling.md](component-details/build-runtime-tooling.md), and [component-details/aws-serverless-platform.md](component-details/aws-serverless-platform.md).
 
-## High Priority
+## Customer And Business Outcomes First
 
-1. Validate the deployed AWS handler path with smoke tests that mirror the now-working SAM-local flow, including the `$default` websocket route and DynamoDB-backed auth/session/connection behavior.
+- Protect user trust at launch: prove the deployed AWS auth and chat path works end to end before calling production readiness.
+- Reduce support burden and delivery risk: add broader automated coverage so regressions are caught before users see them.
+- Improve recovery speed and operational confidence: add CI/CD gates, observability, and rollback procedure for the serverless target.
+
+## Priority Legend
+
+- 🔴 High priority: immediate attention for customer trust or release confidence.
+- 🟡 Medium priority: important quality and cost hardening after high-priority closure.
+- 🟢 Completed recently: evidence of reduced risk.
+
+## 🔴 High Priority
+
+1. Prevent launch-time trust failures by validating the deployed AWS handler path with smoke tests that mirror the now-working SAM-local flow, including the `$default` websocket route and DynamoDB-backed auth/session/connection behavior.
    Related components: [Chat API](component-details/chat-api.md), [Connection Manager](component-details/connection-manager.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
-2. Add broader backend and frontend automated tests around chat protocol validation, error handling, disconnects, reconnect behavior, and the deployed serverless flow.
+2. Reduce customer-facing regressions and support churn by adding broader backend and frontend automated tests around chat protocol validation, error handling, disconnects, reconnect behavior, and the deployed serverless flow.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
-3. Add CI/CD, observability, and rollback procedure for the serverless target now that the first DynamoDB-backed Lambda path exists.
+3. Improve release confidence and incident recovery by adding CI/CD, observability, and rollback procedure for the serverless target now that the first DynamoDB-backed Lambda path exists.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Frontend UI](component-details/frontend-ui.md)
 
-## Medium Priority
+## 🟡 Medium Priority
 
-1. Add per-connection rate limiting to complete protocol abuse hardening.
+1. Protect service quality and infrastructure cost by adding per-connection rate limiting to complete protocol abuse hardening.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Connection Manager](component-details/connection-manager.md)
-2. Improve reconnect UX and accessibility support for inbound message announcements.
+2. Improve retention and inclusive usability by adding reconnect UX and accessibility support for inbound message announcements.
    Related components: [Frontend UI](component-details/frontend-ui.md), [Frontend Styling](component-details/frontend-styling.md)
-3. Define backend settings/config conventions to match the now-documented frontend env contract and the future AWS endpoint topology.
+3. Reduce deployment mistakes and onboarding friction by defining backend settings/config conventions to match the now-documented frontend env contract and the future AWS endpoint topology.
    Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Chat API](component-details/chat-api.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 
-## Completed Recently
+## 🟢 Completed Recently
 
 - 2026-04-23: Added `backend/tests/aws_local_smoke.rs`, a `make sam-local-smoke` target, and browser-validated the Vite frontend against the SAM-local auth API plus websocket gateway.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Frontend UI](component-details/frontend-ui.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)

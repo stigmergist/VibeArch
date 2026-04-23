@@ -1,5 +1,17 @@
 # Architecture Risks
 
+## Customer And Business Risk Summary
+
+- Highest customer trust risk: shipping the AWS path without deployed validation, CI gates, and observability can create visible reliability failures that hurt confidence early.
+- Highest delivery-speed risk: missing CI/CD and broad integration coverage increases regression risk and slows feature velocity due to manual verification and rework.
+- Highest cost and operations risk: limited telemetry and unclear WebSocket cost guardrails can increase incident recovery time and make unit economics harder to predict.
+
+## Scan First (Traffic Light)
+
+- 🔴 Act now: R-013 (deployed AWS path still unvalidated) and R-009 (observability baseline missing) are the most direct customer-trust and incident-recovery risks.
+- 🟡 Watch closely: R-008, R-006, and R-010 can amplify regressions and user-visible instability during release cycles.
+- 🟢 Stable base: R-001, R-002, and R-005 are mitigated and currently low-risk.
+
 | ID    | Risk                                                                                                                                                                                                                 | Quality Area                                                           | Severity | Likelihood | Mitigation                                                                                   | Owner            |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------- | ---------- | -------------------------------------------------------------------------------------------- | ---------------- |
 | R-001 | ~~No authentication allows impersonation (`sender` is client-provided)~~ **Mitigated (2026-04-23)**                                                                                                                 | Security, Privacy and Data Protection                                  | Low      | Low        | None — mitigation complete                                                                   | Backend owner    |

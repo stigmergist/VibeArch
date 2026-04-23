@@ -34,6 +34,12 @@ This wiki is the architecture source of truth for the repository.
 - Deployability today: strong for the supported AWS-local development path and materially closer to the target AWS runtime because local auth and websocket flows now run through the shared Lambda-oriented handlers; production still lacks CI/CD, observability, secrets handling, and deployed validation.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
+## Scan First (Traffic Light)
+
+- 🔴 Act now: observability and deployed AWS validation gaps are the main launch-confidence risks.
+- 🟡 Watch closely: reliability and delivery-speed depend on CI/CD, reconnect behavior, and broader integration coverage.
+- 🟢 Stable base: input validation, modular boundaries, and server-owned sender identity are in a good state.
+
 ## Recommended Action Index
 
 - Global architecture priorities live in [Next Steps](next-steps.md).

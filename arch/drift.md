@@ -1,5 +1,17 @@
 # Drift
 
+## Customer And Business Consequence Snapshot
+
+- Reliability perception risk: users can still experience broken sessions after disconnects because reconnect behavior is not yet in place.
+- Release confidence risk: production readiness claims can still outpace evidence until deployed AWS validation, CI checks, and observability are complete.
+- Support and onboarding risk: documentation and runtime wording mismatches (for example session persistence language) increase confusion and operational friction.
+
+## Scan First (Traffic Light)
+
+- 🔴 Act now: observability and deployed AWS validation drift still separate intended production readiness from current evidence.
+- 🟡 Watch closely: reconnect UX, message contract evolution, and deployment automation remain partially resolved and user-impacting.
+- 🟢 Stable base: sender ownership, payload validation, and safe cleanup behavior are aligned with intended architecture.
+
 ## Quality Status Snapshot
 
 - 🔴 Weak: observability.

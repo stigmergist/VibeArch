@@ -5,6 +5,12 @@
 - Provide a simple real-time chat experience for multiple browser clients.
 - Keep one backend codebase that runs through the same AWS-oriented handler model locally and in AWS.
 
+## Scan First (Traffic Light)
+
+- 🔴 Act now: production observability and deployed AWS validation remain the key blockers for launch confidence.
+- 🟡 Watch closely: reliability, resilience, and delivery speed are constrained by missing CI/CD and reconnect coverage.
+- 🟢 Stable base: auth/session guardrails, payload validation, and backend modular separation are in place.
+
 ## Boundaries
 
 - Frontend runtime: browser, served by Vite dev server (`frontend/`).

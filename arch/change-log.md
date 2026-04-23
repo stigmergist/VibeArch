@@ -1,5 +1,19 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 24)
+
+- Improved cross-doc scanability by adding explicit traffic-light "Scan First" cue blocks to `arch/README.md`, `arch/system-overview.md`, `arch/risks.md`, and `arch/drift.md`.
+- Added visual priority legend and traffic-light section headers (`🔴`, `🟡`, `🟢`) in `arch/next-steps.md` so urgent work is identifiable at a glance.
+- Kept technical recommendations unchanged; this update improves attention guidance and triage speed for readers.
+- Gate result: change-volume gate not triggered by code-zone runtime changes in this pass; architecture update performed explicitly for documentation usability.
+
+## 2026-04-23 (update 23)
+
+- Reframed architecture outputs to be business and customer value first, with technical detail as supporting evidence, in `arch/next-steps.md`, `arch/risks.md`, and `arch/drift.md`.
+- Added concise customer/business consequence summaries at the top of each of those docs so priorities are easier to communicate beyond engineering.
+- Confirmed technical recommendations and prioritization remain unchanged; only framing and decision-readability were improved.
+- Gate result: change-volume refresh gate not triggered by code-zone runtime changes in this pass; architecture sync was explicitly requested.
+
 ## 2026-04-23 (update 22)
 
 - Ran an explicit architecture sync pass after the instruction-model update and evaluated the new change-volume gate.
