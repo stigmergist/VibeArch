@@ -1,5 +1,16 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 13)
+
+- Added baseline container assets: `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, per-app `.dockerignore` files, and `compose.yaml`.
+- Updated deployability, risks, and next steps to reflect that local containerized execution now exists while CI, production manifests, and runtime hardening remain open.
+- Added README instructions for the containerized run path and documented the frontend build-time websocket contract used by compose.
+
+## 2026-04-23 (update 12)
+
+- Recorded container-first as the accepted production deployment target and removed the stale VM-vs-container decision point.
+- Updated deployability language across the wiki and README so packaging gaps are described relative to the chosen container-first path.
+
 ## 2026-04-23 (update 11)
 
 - Synced the wiki to the new auth/session implementation: `POST /auth/register`, `POST /auth/login`, token-gated websocket access, and server-owned sender identity.

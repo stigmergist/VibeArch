@@ -33,9 +33,9 @@
   - Proposed correction: define message envelope schema and versioning strategy in docs and code.
 
 - Intended: production deployability should be repeatable and automated.
-  - Observed: repository has no Dockerfile/compose files and no CI workflow definitions.
-  - Impact: deployment is manual and environment drift risk is high.
-  - Proposed correction: add container packaging and CI pipeline with build/test gates.
+  - Observed: repository now has Dockerfiles and a local `docker compose` workflow, but it still has no CI workflow definitions or production deployment manifests.
+  - Impact: local containerized execution is aligned with the architecture target, but production promotion and environment consistency remain underdefined.
+  - Proposed correction: add CI pipeline, production deployment manifests, and runtime hardening on top of the compose baseline.
 
 - Intended: operational behavior should be observable.
   - Observed: backend now emits basic application log messages for rejected payloads and unexpected runtime exceptions, but no structured logging, metrics, or alert hooks exist.
@@ -52,4 +52,3 @@
 - Should sessions expire after a fixed lifetime, on browser close, or only on explicit logout?
 - Should reconnect include server-provided short history window?
 - Is this service intended to stay single-room, or should room/channel concepts be introduced?
-- Should deployment target be container-first (Kubernetes/managed container) or VM-first for v1 production?

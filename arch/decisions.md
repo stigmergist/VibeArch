@@ -63,3 +63,11 @@
 - Decision: Add `POST /auth/register` and `POST /auth/login` endpoints that issue in-memory session tokens, require `token` on `WS /ws/chat`, and reject any client payload that includes a `sender` field.
 - Rationale: Prevent impersonation by moving identity ownership to the server while keeping the implementation simple enough for the current in-memory architecture.
 - Consequences: Message payloads are simpler (`{ text }`), frontend deployment must keep websocket and auth endpoints aligned, and auth state is still ephemeral until persistence/session lifecycle policy is added.
+
+## ADR-009: Treat Production Deployment As Container-First
+
+- Status: accepted
+- Date: 2026-04-23
+- Decision: Standardize on a container-first production target for both frontend and backend rather than pursuing a VM-first deployment model.
+- Rationale: Container packaging gives a repeatable runtime boundary, aligns with the documented managed-platform target, and reduces environment drift between development, CI, and deployment.
+- Consequences: Dockerfiles, compose/dev profiles, container-oriented CI checks, and environment injection conventions become the next packaging baseline; VM/manual deployment remains possible for ad hoc testing but is not the architecture target.

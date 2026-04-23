@@ -39,6 +39,24 @@ npm run dev
 
 Open `http://localhost:5173`.
 
+Production direction:
+- Container-first deployment target for both frontend and backend.
+- Baseline Dockerfiles and a local `docker compose` workflow are now included.
+
+## Run with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Open `http://localhost:5173`.
+
+Container notes:
+- The frontend container serves the built app on port `5173` via Nginx.
+- The backend container serves FastAPI on port `8000`.
+- The compose file builds the frontend with `VITE_CHAT_WS_URL=ws://localhost:8000/ws/chat` so the browser can reach the backend through the host-mapped port.
+- If you change `VITE_CHAT_WS_URL`, rebuild the frontend image.
+
 Frontend environment contract:
 - `VITE_CHAT_WS_URL`: full websocket URL used by the browser client.
 - Local default/example: `ws://localhost:8000/ws/chat`

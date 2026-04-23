@@ -9,12 +9,12 @@
 
 ## Scope
 
-Primary implementation: `frontend/package.json`, `frontend/vite.config.js`, `backend/requirements.txt`
+Primary implementation: `compose.yaml`, `frontend/Dockerfile`, `frontend/nginx.conf`, `frontend/package.json`, `frontend/vite.config.js`, `backend/Dockerfile`, `backend/requirements.txt`
 
 ## Responsibilities
 
 - Define frontend and backend local runtime/tooling dependencies.
-- Provide the base surface for packaging, CI, observability rollout, and environment configuration.
+- Provide the base surface for packaging, containerized local runs, CI, observability rollout, and environment configuration.
 
 ## Dependencies
 
@@ -24,19 +24,19 @@ Primary implementation: `frontend/package.json`, `frontend/vite.config.js`, `bac
 
 ## Risks And Gaps
 
-- No Dockerfiles or container orchestration/dev packaging exists.
 - No CI workflow exists.
+- Local container packaging exists, but there are no production deployment manifests or runtime hardening conventions yet.
 - Frontend runtime configuration is now environment-driven for the socket URL, and auth endpoint discovery is derived from that same value, but backend settings and deployment injection conventions are still incomplete.
 - Observability and release/rollback procedures are undocumented.
 
 ## Recommended Actions
 
-1. Add frontend/backend Dockerfiles and a simple local compose profile.
-2. Add CI for build, test, and lint/type/syntax validation.
-3. Introduce backend environment-driven settings and document deployment-time injection for `VITE_CHAT_WS_URL`, allowed origins, and session policy.
+1. Add CI for build, test, and lint/type/syntax validation.
+2. Introduce backend environment-driven settings and document deployment-time injection for `VITE_CHAT_WS_URL`, allowed origins, and session policy.
+3. Add production deployment manifests and container runtime hardening beyond the local compose profile.
 4. Add structured logging, metrics, and operational runbook content.
 5. Define release and rollback procedure.
 
 ## Open Questions
 
-- Should the initial production target be VM-based or container-first?
+- Which managed container platform should be the first production target on top of the local compose baseline?

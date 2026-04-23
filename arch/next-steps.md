@@ -15,7 +15,7 @@ This file is the top-level index for recommended architecture work. Component-sp
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Connection Manager](component-details/connection-manager.md)
 2. Define the scale path for broadcast fan-out before any multi-instance deployment.
    Related components: [Connection Manager](component-details/connection-manager.md), [Chat API](component-details/chat-api.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
-3. Add production deployment baseline work: containerization, CI/CD, observability, and rollback procedure.
+3. Add production deployment hardening for the container-first target: production manifests, CI/CD, observability, and rollback procedure.
    Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Chat API](component-details/chat-api.md), [Frontend UI](component-details/frontend-ui.md)
 4. Improve reconnect UX and accessibility support for inbound message announcements.
    Related components: [Frontend UI](component-details/frontend-ui.md), [Frontend Styling](component-details/frontend-styling.md)
@@ -24,6 +24,8 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 ## Completed Recently
 
+- 2026-04-23: Added baseline Dockerfiles and a local `docker compose` workflow for frontend/backend containers.
+   Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Frontend UI](component-details/frontend-ui.md), [Chat API](component-details/chat-api.md)
 - 2026-04-23: Added registration/login-backed session tokens and made `sender` server-owned after auth.
    Related components: [Chat API](component-details/chat-api.md), [Frontend UI](component-details/frontend-ui.md), [Payload Validator](component-details/payload-validator.md)
 - 2026-04-23: Frontend socket configuration externalized via `VITE_CHAT_WS_URL` and documented with `.env.example`.

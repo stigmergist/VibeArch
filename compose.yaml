@@ -1,0 +1,16 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_CHAT_WS_URL: ws://localhost:8000/ws/chat
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"

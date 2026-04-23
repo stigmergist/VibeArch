@@ -28,7 +28,7 @@ This wiki is the architecture source of truth for the repository.
 ## NFR And Deployability Snapshot
 
 - NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/security/manageability/portability/cost/robustness/reliability/fault tolerance/testability/maintainability/privacy and data protection/usability/accessibility, 🔴 weak in observability.
-- Deployability today: strong for local development, partial for cloud VM/manual deploy, not production-ready for managed/containerized operation yet.
+- Deployability today: strong for local development and local containerized runs, but not production-ready for the chosen container-first deployment target because production manifests, CI, and operational controls are still missing.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
 ## Recommended Action Index
@@ -44,6 +44,7 @@ This wiki is the architecture source of truth for the repository.
 
 ## Completed Recently
 
+- 2026-04-23: Added baseline Dockerfiles plus a local `docker compose` workflow for the container-first deployment path.
 - 2026-04-23: Added in-memory registration/login session tokens and made chat sender identity server-owned after auth.
 - 2026-04-23: Frontend websocket endpoint externalized via `VITE_CHAT_WS_URL` with documented local default/fallback.
 - 2026-04-23: WebSocket resilience hardening completed with guaranteed disconnect/finally cleanup path and structured runtime error logging.

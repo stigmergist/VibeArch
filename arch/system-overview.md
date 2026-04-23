@@ -9,6 +9,7 @@
 
 - Frontend runtime: browser, served by Vite dev server (`frontend/`).
 - Backend runtime: FastAPI server (`backend/`).
+- Container runtime: local `docker compose` with frontend Nginx container and backend Uvicorn container (`compose.yaml`).
 - Persistence: none (in-memory only).
 - Wire protocol: unversioned JSON messages over a single WebSocket endpoint.
 
@@ -28,8 +29,11 @@ flowchart LR
 	Browser[Browser Client\nReact + Vite UI] -->|HTTP JSON\n/auth/register\n/auth/login| API[FastAPI App\nbackend/app/main.py]
 	Browser <-->|WebSocket JSON\n/ws/chat?token=...| API
 	Browser -->|HTTP asset requests| Vite[Vite Dev Server]
+	Browser -->|HTTP asset requests| Nginx[Frontend Container\nNginx static assets]
 	API -->|In-memory state| Manager[ConnectionManager\nprocess-local connection list]
 	API -->|In-memory state| Identity[UserStore + SessionStore\nprocess-local identities]
+	Compose[compose.yaml] --> Nginx
+	Compose --> API
 	Monitor[Operator or Probe] -->|GET /health| API
 ```
 
@@ -60,7 +64,7 @@ flowchart LR
 | Security | 🟡 watch | Register/login and server-owned sender identity exist, with PBKDF2 password hashing and token-gated websocket access, but sessions do not expire, logout is absent, CORS is permissive, and rate limiting is still absent. | Add session expiry/logout, origin restrictions, and per-connection/auth rate limiting. |
 | Manageability | 🟡 watch | No CI workflow, no operational runbook/deployment scripts, and only basic application logging. | Add CI checks, structured logs, and minimal operational runbook. |
 | Flexibility | 🟢 good | Clean frontend/backend split and simple protocol permit iterative change. | Preserve separation while introducing schema/versioning and env config. |
-| Portability | 🟡 watch | Frontend socket URL is now environment-driven via `VITE_CHAT_WS_URL`, but no container spec or deployment packaging exists yet. | Add Docker-based runtime packaging and document environment injection per deployment target. |
+| Portability | 🟡 watch | Frontend socket URL is environment-driven and baseline Docker packaging now exists, but there are no production platform manifests or environment-specific deployment definitions yet. | Add production deployment manifests and document environment injection per deployment target. |
 | Cost | 🟡 watch | Low current runtime footprint, but no cost controls/limits for future scaling. | Define deployment sizing defaults and autoscaling/capacity guardrails. |
 | Resilience | 🟡 watch | Backend cleanup is exception-safe, but the client has no reconnect/backoff logic and there are no automated failure-injection tests for disconnect/restart scenarios. | Add client reconnect/backoff policy and backend/frontend resilience tests around restart and disconnect behavior. |
 | Robustness | 🟡 watch | Invalid payloads are handled safely, but the wire contract is still implicit/unversioned and the app has no persisted recovery state. | Define a versioned message schema and add contract tests for malformed/edge-case inputs. |
@@ -79,12 +83,14 @@ flowchart LR
 ### Where It Can Be Deployed Now
 
 - Local developer machine: ready.
-- Single VM/manual deployment: possible with manual process startup for frontend and backend.
-- Containerized or managed platform deployment: not yet ready as no Dockerfile/compose or platform manifests are present.
+- Local containerized run via `docker compose`: ready.
+- Single VM/manual deployment: technically possible, but it is not the intended production path.
+- Containerized or managed platform deployment: target direction, with baseline Dockerfiles in place, but not yet ready because production manifests and operational hardening are absent.
 
 ### Missing For Production Deployment
 
 - Configuration management for runtime endpoints and auth/session settings beyond the documented frontend `VITE_CHAT_WS_URL` contract and derived `/auth/*` expectation.
+- Production deployment manifests and runtime conventions beyond the local `docker compose` baseline.
 - Secrets strategy (none defined yet).
 - CI/CD pipeline and automated test gate (no workflow files detected).
 - Observability baseline (structured logs, metrics, alerting).
@@ -96,7 +102,7 @@ flowchart LR
 - Target model: containerized frontend and backend on a managed platform with TLS termination and external pub/sub for scale.
 - Smallest path:
 	1. Introduce backend settings model and deployment-time environment injection conventions around the documented frontend `VITE_CHAT_WS_URL` contract, allowed origins, and session policy.
-	2. Add Dockerfiles and a simple compose/dev deployment profile.
+	2. Add production-oriented container deployment manifests on top of the local compose baseline.
 	3. Add CI pipeline for lint/test/build.
 	4. Add structured logging and minimum health/readiness checks.
 	5. Define release and rollback procedure for frontend/backend deployments.
