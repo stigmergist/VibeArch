@@ -1,5 +1,16 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 22)
+
+- Ran an explicit architecture sync pass after the instruction-model update and evaluated the new change-volume gate.
+- Gate result: not triggered for code-zone runtime changes in this pass (no boundary/API/persistence/runtime topology change detected; architecture content remained largely stable).
+- Synced navigation consistency by adding the missing `component-details/aws-serverless-platform.md` link in `arch/next-steps.md`.
+- Added a concrete documentation-drift note in `arch/drift.md` for the top-level `README.md` wording that still says "in-memory session token" despite the supported SAM-local/AWS path using DynamoDB-backed session state.
+- Re-ranked top actions remained stable:
+	1. Deployed AWS path validation (smoke coverage beyond local SAM)
+	2. CI/CD + observability + rollback baseline
+	3. Broader chat/reconnect integration and regression tests
+
 ## 2026-04-23 (update 21)
 
 - Removed stale references to the deleted `compose.yaml` path and the no-longer-supported direct local backend runtime from the architecture wiki.

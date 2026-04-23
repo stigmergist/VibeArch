@@ -54,6 +54,26 @@ Trigger architecture refresh when:
 
 For normal implementation requests, do a lightweight architecture conformance check before producing code.
 
+## Architecture Refresh Gate (Change Volume)
+
+Trigger an architecture refresh when code change volume crosses the threshold below, even if the user did not explicitly ask for architecture work.
+
+Refresh gate signals (outside `arch/`):
+- 5 or more files changed, or
+- 200 or more net changed lines, or
+- Any change to runtime boundaries, API contracts, persistence model, auth/session logic, deployment topology, or build/release pipeline.
+
+When the gate is triggered:
+1. Re-scan code-zone changes since the last architecture refresh recorded in `arch/change-log.md`.
+2. Re-validate and update `arch/next-steps.md`, `arch/risks.md`, and `arch/drift.md` based on current evidence.
+3. Append an entry to `arch/change-log.md` with:
+   - Trigger signal(s) and change volume summary
+   - Scope reviewed (modules/files)
+   - What changed vs what remained stable
+   - Re-ranked top 1-3 architecture actions
+
+If the gate is not triggered, continue with lightweight architecture conformance checks only.
+
 ## Required workflow
 
 For architecture sync tasks:
@@ -126,6 +146,7 @@ Before completing any architecture sync, verify:
 - [ ] All ADRs are still valid; mark as "superseded" if new decisions override old ones
 - [ ] NFR scorecard evidence lines reference actual current code paths or runtime behavior
 - [ ] Change log includes entry for this sync pass with specific file updates and rationale
+- [ ] Change-volume gate has been evaluated; if triggered, `arch/change-log.md` records the trigger signal, review scope, and reprioritized actions
 
 ## Non-Functional Architecture Requirements
 
