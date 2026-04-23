@@ -1,0 +1,223 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --bg-1: #f3f2eb;
+  --bg-2: #d8efe8;
+  --ink: #16302b;
+  --ink-soft: #4b625d;
+  --card: rgba(255, 255, 255, 0.88);
+  --line: #b7d4cb;
+  --accent: #0f9f8f;
+  --accent-2: #f06c36;
+  --danger: #b05555;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at 15% 20%, #fef6cf 0, transparent 35%),
+    radial-gradient(circle at 82% 30%, #bde7dc 0, transparent 40%),
+    linear-gradient(120deg, var(--bg-1), var(--bg-2));
+  min-height: 100vh;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.chat-card {
+  width: min(920px, 100%);
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 24px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 16px 80px rgba(15, 52, 47, 0.18);
+  padding: 1rem;
+  display: grid;
+  gap: 0.8rem;
+  animation: rise-in 0.45s ease-out;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-soft);
+}
+
+h1 {
+  margin: 0.15rem 0 0;
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+}
+
+.status {
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.online {
+  background: rgba(15, 159, 143, 0.16);
+  color: #11665c;
+}
+
+.offline {
+  background: rgba(176, 85, 85, 0.16);
+  color: var(--danger);
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.name-row label {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+input {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+  font: inherit;
+  width: 100%;
+  background: #f8fffc;
+}
+
+.name-row input {
+  width: min(240px, 100%);
+}
+
+.messages {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  min-height: 360px;
+  max-height: 56vh;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.messages li {
+  margin: 0.45rem 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  background: #ecfbf6;
+  animation: pop-in 0.2s ease-out;
+}
+
+.messages li.system {
+  background: #fff2e8;
+  color: #824722;
+  font-style: italic;
+}
+
+.messages .meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.2rem;
+}
+
+.messages p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.6rem;
+}
+
+button {
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), #0a8075);
+  color: white;
+  font-weight: 600;
+  padding: 0.65rem 1.1rem;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(13, 121, 110, 0.25);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .chat-card {
+    border-radius: 18px;
+    padding: 0.8rem;
+  }
+
+  .messages {
+    min-height: 300px;
+    max-height: 50vh;
+  }
+
+  .composer {
+    grid-template-columns: 1fr;
+  }
+}
