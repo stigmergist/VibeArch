@@ -135,6 +135,12 @@ input {
   font-style: italic;
 }
 
+.messages li.error-msg {
+  background: #fde8e8;
+  color: #7f2020;
+  font-style: italic;
+}
+
 .messages .meta {
   display: flex;
   justify-content: space-between;

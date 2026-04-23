@@ -30,23 +30,38 @@ sequenceDiagram
 ## Flow: Send Message
 
 1. User submits message in frontend composer.
-2. Frontend sends JSON payload:
-   - `sender: string`
-   - `text: string`
-3. Backend receives text frame and parses JSON.
-4. Backend validates non-empty `text` and default-falls `sender`.
-5. Backend broadcasts normalized message event to all clients:
+2. Frontend sends JSON payload: `{ sender: string, text: string }`.
+3. Backend receives text frame and passes it to `_parse_and_validate()`.
+4. If validation fails, backend sends `{ type: "error", text: description, sentAt }` to sender only; loop continues.
+5. If `text` is blank after strip, frame is silently discarded; loop continues.
+6. Backend broadcasts normalized message event to all connected clients:
    - `type: "message"`
    - `sender: string`
    - `text: string`
    - `sentAt: ISO timestamp`
 
-## Flow: Socket Error Path (Current)
+## Flow: Validation Error Path
 
-1. Backend receives malformed JSON or unexpected payload content.
-2. `json.loads` may raise and exit the websocket handler.
-3. Connection cleanup is not guaranteed for non-disconnect exceptions.
-4. Stale connection references may remain until a later broadcast cleanup attempt.
+```mermaid
+sequenceDiagram
+   participant F as React UI (sender)
+   participant B as FastAPI WebSocket
+
+   F->>B: Send malformed/oversized/invalid frame
+   B->>B: _parse_and_validate() raises ValueError
+   B-->>F: send_json({ type: error, text: description })
+   Note over B: Other clients receive nothing
+   B->>B: Continue receive loop
+```
+
+## Validation Rules Reference
+
+| Field | Rule |
+|---|---|
+| Frame | ≤ 4 096 bytes (UTF-8) |
+| JSON | Must be parseable as a JSON object |
+| `text` | Required; must be `str`; non-empty after strip; ≤ 1 000 chars |
+| `sender` | Optional; must be `str` if present; truncated to 48 chars; default `"Anonymous"` |
 
 ## Flow: Health Check
 

@@ -40,10 +40,18 @@
 - Rationale: Move quickly with a minimal chat protocol.
 - Consequences: Contract evolution risk increases as features are added.
 
-## ADR-006: Add Protocol Validation And Error Guards
+## ADR-006: Validate Inbound WebSocket Payloads At Protocol Layer
+
+- Status: accepted
+- Date: 2026-04-23
+- Decision: Implement `_parse_and_validate()` in `backend/app/main.py` to enforce frame-size cap, JSON parse, object shape, field types, and length limits before any business logic.
+- Rationale: Prevent malformed or oversized frames from crashing the socket handler or being broadcast; return structured error responses to the sender only rather than silently dropping or propagating.
+- Consequences: Protocol constraints are now documented constants (`MAX_FRAME_BYTES`, `MAX_TEXT_CHARS`, `MAX_SENDER_CHARS`). Rate limiting is not yet covered and is a known remaining gap (see R-003).
+
+## ADR-007: Add Full Exception-Safe Cleanup In WebSocket Loop
 
 - Status: proposed
 - Date: 2026-04-23
-- Decision: Introduce strict payload validation (shape + max length) and explicit malformed JSON handling in the socket loop.
-- Rationale: Prevent handler crashes, abusive payloads, and ambiguous client behavior.
-- Consequences: Slight complexity increase, significant reliability and security improvement.
+- Decision: Add a broad exception handling/finally path in `chat_socket` to ensure connections are removed even on non-disconnect runtime failures.
+- Rationale: Current validation guards malformed payloads, but unexpected runtime exceptions can still bypass immediate cleanup.
+- Consequences: Improves availability/resilience posture and reduces stale connection risk.

@@ -26,13 +26,29 @@ Dependencies:
 Responsibilities:
 - Expose `GET /health` for simple health checks.
 - Expose `WS /ws/chat` for bi-directional chat transport.
-- Validate incoming message payload basics and broadcast outbound events.
+- Enforce inbound payload protocol via `_parse_and_validate()` (see below).
+- Route validation errors back to the originating client only; never broadcast them.
+- Broadcast well-formed messages to all connected clients.
 - Generate server-side event timestamps (`sentAt`).
 
 Dependencies:
 - FastAPI
 - Uvicorn runtime
 - In-memory connection registry (`ConnectionManager`)
+
+## Payload Validator (`backend/app/main.py` — `_parse_and_validate`)
+
+Responsibilities:
+- Reject frames exceeding 4 096 bytes (UTF-8 encoded).
+- Reject malformed JSON with a user-safe error message.
+- Reject non-object JSON (e.g. bare strings or arrays).
+- Reject `text` that is absent, non-string, blank after strip, or longer than 1 000 characters.
+- Reject `sender` that is non-string; silently truncate to 48 characters; default to `"Anonymous"`.
+- Return `None` for silently discarded frames (blank text).
+- Raise `ValueError` with a user-safe description for all other invalid payloads.
+
+Dependencies:
+- Python standard library (`json`)
 
 ## Connection Manager (`backend/app/main.py`)
 

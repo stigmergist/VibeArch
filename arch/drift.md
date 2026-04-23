@@ -2,9 +2,9 @@
 
 ## Quality Status Snapshot
 
-- 🔴 Weak: security, availability, resilience.
-- 🟡 Watch: performance, scalability, manageability, portability, cost.
-- 🟢 Good: flexibility.
+- 🔴 Weak: security (auth absent), availability (no finally path), resilience.
+- 🟡 Watch: performance (rate limiting absent), scalability, manageability, portability, cost.
+- 🟢 Good: flexibility, input validation.
 
 ## Intended vs Observed
 
@@ -14,9 +14,9 @@
   - Proposed correction: move socket URL to Vite env variable (`VITE_CHAT_WS_URL`).
 
 - Intended: websocket handlers should fail safely and clean up reliably.
-  - Observed: `chat_socket` only catches `WebSocketDisconnect`; malformed JSON can raise outside that path.
-  - Impact: reliability issues under malformed input; stale connection references possible until later cleanup.
-  - Proposed correction: add payload parse/validation guard and guaranteed disconnect path.
+  - Observed (partially resolved 2026-04-23): `_parse_and_validate()` guards against malformed JSON and invalid shapes; validation errors are returned to sender only; the receive loop continues. `WebSocketDisconnect` is still the only caught exception for loop exit, so non-disconnect runtime failures may still skip cleanup.
+  - Remaining gap: add a broad `except Exception` with a guaranteed `manager.disconnect()` / `finally` path.
+  - Status: 🟡 partially resolved.
 
 - Intended: public message contract should have explicit evolution path.
   - Observed: protocol is implicit/unversioned in UI and backend logic.

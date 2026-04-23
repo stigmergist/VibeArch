@@ -33,8 +33,8 @@ flowchart LR
 ## Major Runtime Concerns
 
 - Connection lifecycle management for disconnect/reconnect.
-- Input validation for incoming payload shape and size.
-- Malformed JSON handling in socket loop (currently no explicit guard).
+- Input validation enforced via `_parse_and_validate()` (frame size, JSON parse, shape, field types, length limits).
+- Validation errors returned to sender only; no broadcast of rejected payloads.
 - No authentication or authorization in current scope.
 - No data persistence or chat history retention.
 - Single-process memory model limits horizontal scalability.
@@ -81,7 +81,7 @@ flowchart LR
 - Target model: containerized frontend and backend on a managed platform with TLS termination and external pub/sub for scale.
 - Smallest path:
 	1. Introduce environment-based socket config (`VITE_CHAT_WS_URL`) and backend settings model.
-	2. Add protocol validation + error handling + test coverage.
+	2. Complete websocket resilience hardening (broad exception handling + guaranteed disconnect/finally path) and cover it with tests.
 	3. Add Dockerfiles and a simple compose/dev deployment profile.
 	4. Add CI pipeline for lint/test/build.
 	5. Add structured logging and minimum health/readiness checks.

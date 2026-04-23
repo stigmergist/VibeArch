@@ -89,8 +89,8 @@ export default function App() {
         <ul className="messages" ref={listRef}>
           {messages.length === 0 && <li className="empty">No messages yet. Say hello.</li>}
           {messages.map((message, index) => (
-            <li key={`${message.sentAt}-${index}`} className={message.type === 'system' ? 'system' : ''}>
-              {message.type === 'system' ? (
+            <li key={`${message.sentAt}-${index}`} className={message.type === 'system' ? 'system' : message.type === 'error' ? 'error-msg' : ''}>
+              {message.type === 'system' || message.type === 'error' ? (
                 <p>{message.text}</p>
               ) : (
                 <>

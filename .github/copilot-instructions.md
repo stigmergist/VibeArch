@@ -59,6 +59,7 @@ For architecture sync tasks:
 3. Record key changes in arch/change-log.md with date and short rationale.
 4. Record any uncertainty or inferred assumptions explicitly.
 5. Re-assess non-functional qualities and deployability implications; update arch/risks.md and arch/drift.md when gaps are found.
+6. Re-validate any embedded "what to do next" / "next steps" suggestions across arch docs against current code and assumptions; remove stale items, adjust priorities, and add evidence notes for changed recommendations.
 
 For code generation tasks:
 1. Read arch/README.md and relevant architecture docs first.
@@ -120,6 +121,7 @@ Architecture wiki content should be:
 - Incremental: prefer small, frequent updates over large rewrites.
 - Non-functional aware: includes explicit quality trade-offs and risk posture.
 - Deployable: clarifies current production readiness and concrete gaps to deploy safely.
+- Current: embedded recommendation lists (for example prioritized next work) are checked for validity and updated when assumptions change.
 
 When unsure:
 - Mark assumptions clearly.
