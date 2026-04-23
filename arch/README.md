@@ -6,6 +6,7 @@ This wiki is the architecture source of truth for the repository.
 
 - [System Overview](system-overview.md)
 - [Components](components.md)
+- [Next Steps](next-steps.md)
 - [Data Flow](data-flow.md)
 - [Decisions](decisions.md)
 - [Risks](risks.md)
@@ -30,14 +31,16 @@ This wiki is the architecture source of truth for the repository.
 - Deployability today: strong for local development, partial for cloud VM/manual deploy, not production-ready for managed/containerized operation yet.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
-## Prioritized Next Architecture Work
+## Recommended Action Index
 
-1. Externalize frontend socket configuration via Vite environment variables (`VITE_CHAT_WS_URL`).
-2. Add backend and frontend automated tests around chat protocol validation, error handling, and reconnect behavior.
-3. Add an identity/auth strategy to prevent sender impersonation and make sender identity server-owned.
-4. Add per-connection rate limiting to complete protocol abuse hardening beyond current payload size/shape checks.
-5. Define scale path for broadcast fan-out (Redis pub/sub or equivalent) before multi-instance deployment.
-6. Add production deployment baseline: containerization, CI/CD, observability, and rollback path.
+- Global architecture priorities live in [Next Steps](next-steps.md).
+- Component-specific actions live in:
+	- [Frontend UI Actions](component-actions/frontend-ui.md)
+	- [Frontend Styling Actions](component-actions/frontend-styling.md)
+	- [Chat API Actions](component-actions/chat-api.md)
+	- [Payload Validator Actions](component-actions/payload-validator.md)
+	- [Connection Manager Actions](component-actions/connection-manager.md)
+	- [Build And Runtime Tooling Actions](component-actions/build-runtime-tooling.md)
 
 ## Completed Recently
 

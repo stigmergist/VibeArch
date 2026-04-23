@@ -1,6 +1,6 @@
 # Components
 
-## Frontend UI (`frontend/src/App.jsx`)
+## [Frontend UI](component-actions/frontend-ui.md) (`frontend/src/App.jsx`)
 
 Responsibilities:
 - Open and maintain a WebSocket connection to backend chat endpoint.
@@ -12,7 +12,12 @@ Dependencies:
 - Browser WebSocket API
 - React state/effect hooks
 
-## Frontend Styling (`frontend/src/styles.css`)
+Related docs:
+- [Frontend Styling](component-actions/frontend-styling.md)
+- [Chat API](component-actions/chat-api.md)
+- [Build And Runtime Tooling](component-actions/build-runtime-tooling.md)
+
+## [Frontend Styling](component-actions/frontend-styling.md) (`frontend/src/styles.css`)
 
 Responsibilities:
 - Define visual theme and responsive layout.
@@ -21,7 +26,10 @@ Responsibilities:
 Dependencies:
 - Native CSS only
 
-## Chat API (`backend/app/main.py`)
+Related docs:
+- [Frontend UI](component-actions/frontend-ui.md)
+
+## [Chat API](component-actions/chat-api.md) (`backend/app/main.py`)
 
 Responsibilities:
 - Expose `GET /health` for simple health checks.
@@ -38,7 +46,13 @@ Dependencies:
 - In-memory connection registry (`ConnectionManager`)
 - Python standard library (`logging`)
 
-## Payload Validator (`backend/app/main.py` — `_parse_and_validate`)
+Related docs:
+- [Payload Validator](component-actions/payload-validator.md)
+- [Connection Manager](component-actions/connection-manager.md)
+- [Frontend UI](component-actions/frontend-ui.md)
+- [Build And Runtime Tooling](component-actions/build-runtime-tooling.md)
+
+## [Payload Validator](component-actions/payload-validator.md) (`backend/app/main.py` — `_parse_and_validate`)
 
 Responsibilities:
 - Reject frames exceeding 4 096 bytes (UTF-8 encoded).
@@ -52,7 +66,11 @@ Responsibilities:
 Dependencies:
 - Python standard library (`json`)
 
-## Connection Manager (`backend/app/main.py`)
+Related docs:
+- [Chat API](component-actions/chat-api.md)
+- [Connection Manager](component-actions/connection-manager.md)
+
+## [Connection Manager](component-actions/connection-manager.md) (`backend/app/main.py`)
 
 Responsibilities:
 - Track connected WebSocket clients.
@@ -61,7 +79,12 @@ Responsibilities:
 Dependencies:
 - FastAPI `WebSocket`
 
-## Build And Runtime Tooling
+Related docs:
+- [Chat API](component-actions/chat-api.md)
+- [Payload Validator](component-actions/payload-validator.md)
+- [Build And Runtime Tooling](component-actions/build-runtime-tooling.md)
+
+## [Build And Runtime Tooling](component-actions/build-runtime-tooling.md)
 
 Frontend tooling (`frontend/package.json`):
 - Vite dev/build/preview scripts.
@@ -69,3 +92,9 @@ Frontend tooling (`frontend/package.json`):
 
 Backend dependency manifest (`backend/requirements.txt`):
 - FastAPI and Uvicorn standard extras only.
+
+Related docs:
+- [Frontend UI](component-actions/frontend-ui.md)
+- [Chat API](component-actions/chat-api.md)
+- [Connection Manager](component-actions/connection-manager.md)
+- [Next Steps](next-steps.md)

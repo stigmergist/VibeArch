@@ -1,5 +1,12 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 8)
+
+- Added [Next Steps](next-steps.md) as the dedicated top-level action index for architecture work.
+- Added `arch/component-actions/` with one action file per identified component: frontend UI, frontend styling, chat API, payload validator, connection manager, and build/runtime tooling.
+- Updated [README](README.md) and [components](components.md) to link into the new action index and per-component action files.
+- Added cross-links between component action files and related architecture docs to improve wiki navigation and reduce stale embedded recommendation lists.
+
 ## 2026-04-23 (update 7)
 
 - Expanded the architecture NFR assessment to cover the additional qualities required by `.github/copilot-instructions.md`: robustness, modularity, reliability, fault tolerance, observability, testability, maintainability, privacy and data protection, usability, and accessibility.

@@ -33,6 +33,8 @@ Copilot should maintain these files in arch when missing, and keep them updated 
 - arch/README.md: wiki index and navigation.
 - arch/system-overview.md: goals, boundaries, context diagram narrative, and major runtime concerns.
 - arch/components.md: component catalog with responsibilities, dependencies, and ownership.
+- arch/next-steps.md: index of recommended next steps and actions, grouped by priority and linked to component-level action files.
+- arch/component-actions/<component-slug>.md: one file per identified component, containing component-specific next steps, risks, dependencies, open questions, and navigation links to related components/docs.
 - arch/data-flow.md: key data flows, interfaces, and integration boundaries.
 - arch/decisions.md: lightweight ADR log (decision, status, date, rationale, consequences).
 - arch/risks.md: architecture risks, severity, likelihood, mitigation, and owner.
@@ -40,6 +42,7 @@ Copilot should maintain these files in arch when missing, and keep them updated 
 - arch/change-log.md: dated summary of wiki updates.
 
 If a file already exists, update in place and preserve human-authored sections whenever possible.
+If a component is identified in `arch/components.md`, it should also have a corresponding file in `arch/component-actions/` unless there is a documented reason not to.
 
 ## Update triggers
 
@@ -56,10 +59,16 @@ For normal implementation requests, do a lightweight architecture conformance ch
 For architecture sync tasks:
 1. Scan code outside arch to detect structure, boundaries, dependencies, and runtime patterns.
 2. Update the architecture wiki files in arch.
+   - Update `arch/next-steps.md` so recommended actions live in a dedicated index rather than being embedded only inside summary docs.
+   - Ensure each identified component has a matching `arch/component-actions/<component-slug>.md` file.
+   - Ensure `arch/components.md` links to each component action file, and each component action file links back to `arch/components.md`, `arch/next-steps.md`, and relevant related components/docs.
 3. Record key changes in arch/change-log.md with date and short rationale.
 4. Record any uncertainty or inferred assumptions explicitly.
 5. Re-assess non-functional qualities and deployability implications; update arch/risks.md and arch/drift.md when gaps are found.
 6. Re-validate any embedded "what to do next" / "next steps" suggestions across arch docs against current code and assumptions; remove stale items, adjust priorities, and add evidence notes for changed recommendations.
+   - Move actionable recommendations out of incidental prose where practical and into `arch/next-steps.md` plus the relevant `arch/component-actions/<component-slug>.md` files.
+   - Re-rank global actions in `arch/next-steps.md` and component-local actions in each component file.
+   - Check that component relationships are cross-linked where useful for navigation.
 
 For code generation tasks:
 1. Read arch/README.md and relevant architecture docs first.
@@ -86,7 +95,7 @@ For architecture weakness analysis tasks:
    - Portability
    - Cost
    - Resilience
-   - Robusteness
+   - Robustness
    - Modularity
    - Reliability
    - Fault Tolerance
@@ -107,6 +116,9 @@ Before completing any architecture sync, verify:
 - [ ] All files in arch/ have been reviewed for embedded recommendations, TODOs, and next-steps language
 - [ ] Completed work from prior syncs has been moved to "Completed" sections with dates
 - [ ] Prioritized work lists have stale items removed and remaining items re-ranked
+- [ ] `arch/next-steps.md` has been updated and does not duplicate stale completed work
+- [ ] Every identified component in `arch/components.md` has a corresponding file in `arch/component-actions/`, or an explicit note explains why not
+- [ ] Cross-links between `arch/components.md`, `arch/next-steps.md`, and `arch/component-actions/*.md` are present and still valid
 - [ ] Evidence in risk/drift tables reflects current code state; update status indicators (🔴/🟡/🟢) if code changes warrant it
 - [ ] Deployability assessment in system-overview.md has been re-evaluated against current infrastructure/CI/CD state
 - [ ] All ADRs are still valid; mark as "superseded" if new decisions override old ones
@@ -144,6 +156,7 @@ Architecture wiki content should be:
 - Non-functional aware: includes explicit quality trade-offs and risk posture.
 - Deployable: clarifies current production readiness and concrete gaps to deploy safely.
 - Current: embedded recommendation lists (for example prioritized next work) are checked for validity and updated when assumptions change.
+- Navigable: component names, architecture files, and related references should be linked where reasonable to reduce dead-end documentation.
 
 When unsure:
 - Mark assumptions clearly.
@@ -156,6 +169,8 @@ When unsure:
 - Keep architecture docs concise, navigable, and up to date.
 - Prefer stable, low-entropy summaries over verbose prose.
 - Use visual structure intentionally: tables for scorecards, traffic-light icons for status, and diagrams where they improve comprehension.
+- Prefer markdown links for architecture file names, component names, and related docs when the link materially improves navigation.
+- `arch/next-steps.md` should serve as the top-level action index; `arch/component-actions/*.md` should hold component-local actions rather than repeating the full global list.
 - Treat arch as the architecture source of truth for implementation guidance.
 - Treat code outside arch as the source of truth for what currently exists.
 - Continuously reconcile differences through documented decisions, risks, and drift notes.
