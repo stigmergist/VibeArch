@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-const socketUrl = 'ws://localhost:8000/ws/chat';
+const socketUrl = import.meta.env.VITE_CHAT_WS_URL || 'ws://localhost:8000/ws/chat';
 
 function formatTime(iso) {
   const date = new Date(iso);

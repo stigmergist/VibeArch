@@ -9,9 +9,9 @@
 ## Intended vs Observed
 
 - Intended: runtime configuration should be environment-aware.
-  - Observed: frontend uses hard-coded `ws://localhost:8000/ws/chat` in `frontend/src/App.jsx`.
-  - Impact: deployment flexibility is limited and environment switches require code edits.
-  - Proposed correction: move socket URL to Vite env variable (`VITE_CHAT_WS_URL`).
+  - Observed (resolved 2026-04-23): frontend now reads `VITE_CHAT_WS_URL` in `frontend/src/App.jsx` and falls back to the local default when unset.
+  - Remaining gap: backend runtime settings and deployment-time env injection conventions are still undocumented beyond the frontend socket contract.
+  - Status: 🟡 partially resolved.
 
 - Intended: websocket handlers should fail safely and clean up reliably.
   - Observed (resolved 2026-04-23): Three-layer exception handling: inner try/except guards payload validation, middle try/except catches `WebSocketDisconnect` gracefully, outer try/except/finally catches broad `Exception` and guarantees cleanup. Disconnect is always called, and failure to broadcast leave message is logged but doesn't crash.

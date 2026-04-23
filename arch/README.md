@@ -34,14 +34,15 @@ This wiki is the architecture source of truth for the repository.
 ## Recommended Action Index
 
 - Global architecture priorities live in [Next Steps](next-steps.md).
-- Component-specific actions live in:
-	- [Frontend UI Actions](component-actions/frontend-ui.md)
-	- [Frontend Styling Actions](component-actions/frontend-styling.md)
-	- [Chat API Actions](component-actions/chat-api.md)
-	- [Payload Validator Actions](component-actions/payload-validator.md)
-	- [Connection Manager Actions](component-actions/connection-manager.md)
-	- [Build And Runtime Tooling Actions](component-actions/build-runtime-tooling.md)
+- Component-specific detail lives in:
+	- [Frontend UI](component-details/frontend-ui.md)
+	- [Frontend Styling](component-details/frontend-styling.md)
+	- [Chat API](component-details/chat-api.md)
+	- [Payload Validator](component-details/payload-validator.md)
+	- [Connection Manager](component-details/connection-manager.md)
+	- [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 
 ## Completed Recently
 
+- 2026-04-23: Frontend websocket endpoint externalized via `VITE_CHAT_WS_URL` with documented local default/fallback.
 - 2026-04-23: WebSocket resilience hardening completed with guaranteed disconnect/finally cleanup path and structured runtime error logging.

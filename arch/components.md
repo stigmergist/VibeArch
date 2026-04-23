@@ -1,100 +1,72 @@
 # Components
 
-## [Frontend UI](component-actions/frontend-ui.md) (`frontend/src/App.jsx`)
+This page is the high-level component map for the repository. Per-component detail lives in [component-details/frontend-ui.md](component-details/frontend-ui.md), [component-details/frontend-styling.md](component-details/frontend-styling.md), [component-details/chat-api.md](component-details/chat-api.md), [component-details/payload-validator.md](component-details/payload-validator.md), [component-details/connection-manager.md](component-details/connection-manager.md), and [component-details/build-runtime-tooling.md](component-details/build-runtime-tooling.md).
 
-Responsibilities:
-- Open and maintain a WebSocket connection to backend chat endpoint.
-- Render connection status, message list, and message composer.
-- Send user-authored messages to server as JSON.
-- Normalize sender fallback (`Guest`) and disable composer while disconnected.
+## [Frontend UI](component-details/frontend-ui.md)
 
-Dependencies:
-- Browser WebSocket API
-- React state/effect hooks
+Summary:
+- Browser-facing chat experience implemented in `frontend/src/App.jsx`.
+- Relies on [Chat API](component-details/chat-api.md) for the message contract and on [Frontend Styling](component-details/frontend-styling.md) for presentation.
 
-Related docs:
-- [Frontend Styling](component-actions/frontend-styling.md)
-- [Chat API](component-actions/chat-api.md)
-- [Build And Runtime Tooling](component-actions/build-runtime-tooling.md)
+High-level relationships:
+- Consumes the websocket protocol exposed by [Chat API](component-details/chat-api.md).
+- Shares UX/accessibility concerns with [Frontend Styling](component-details/frontend-styling.md).
+- Depends on [Build And Runtime Tooling](component-details/build-runtime-tooling.md) for environment configuration and test automation.
 
-## [Frontend Styling](component-actions/frontend-styling.md) (`frontend/src/styles.css`)
+## [Frontend Styling](component-details/frontend-styling.md)
 
-Responsibilities:
-- Define visual theme and responsive layout.
-- Provide motion and readability patterns for chat timeline.
+Summary:
+- Visual system and responsive layout for the chat UI in `frontend/src/styles.css`.
+- Closely coupled to [Frontend UI](component-details/frontend-ui.md) state and semantics.
 
-Dependencies:
-- Native CSS only
+High-level relationships:
+- Styles the states emitted by [Frontend UI](component-details/frontend-ui.md).
+- Carries the main accessibility/contrast presentation concerns for the browser layer.
 
-Related docs:
-- [Frontend UI](component-actions/frontend-ui.md)
+## [Chat API](component-details/chat-api.md)
 
-## [Chat API](component-actions/chat-api.md) (`backend/app/main.py`)
+Summary:
+- FastAPI websocket and health endpoint implementation in `backend/app/main.py`.
+- Orchestrates validation, connection lifecycle handling, and outbound message broadcast.
 
-Responsibilities:
-- Expose `GET /health` for simple health checks.
-- Expose `WS /ws/chat` for bi-directional chat transport with guaranteed cleanup via try/except/finally.
-- Enforce inbound payload protocol via `_parse_and_validate()` (see below).
-- Route validation errors back to the originating client only; never broadcast them.
-- Broadcast well-formed messages to all connected clients.
-- Generate server-side event timestamps (`sentAt`).
-- Catch `WebSocketDisconnect` cleanly and log unexpected runtime exceptions with full traceback context.
+High-level relationships:
+- Depends on [Payload Validator](component-details/payload-validator.md) for inbound protocol hardening.
+- Depends on [Connection Manager](component-details/connection-manager.md) for active-client tracking and fan-out.
+- Serves [Frontend UI](component-details/frontend-ui.md) as the current transport boundary.
+- Relies on [Build And Runtime Tooling](component-details/build-runtime-tooling.md) for deployment and observability rollout.
 
-Dependencies:
-- FastAPI
-- Uvicorn runtime
-- In-memory connection registry (`ConnectionManager`)
-- Python standard library (`logging`)
+## [Payload Validator](component-details/payload-validator.md)
 
-Related docs:
-- [Payload Validator](component-actions/payload-validator.md)
-- [Connection Manager](component-actions/connection-manager.md)
-- [Frontend UI](component-actions/frontend-ui.md)
-- [Build And Runtime Tooling](component-actions/build-runtime-tooling.md)
+Summary:
+- Protocol-hardening helper `_parse_and_validate()` in `backend/app/main.py`.
+- Encodes message size, shape, type, and normalization rules before messages enter the chat flow.
 
-## [Payload Validator](component-actions/payload-validator.md) (`backend/app/main.py` — `_parse_and_validate`)
+High-level relationships:
+- Feeds sanitized data into [Chat API](component-details/chat-api.md).
+- Influences failure and rejection behavior seen by [Frontend UI](component-details/frontend-ui.md).
 
-Responsibilities:
-- Reject frames exceeding 4 096 bytes (UTF-8 encoded).
-- Reject malformed JSON with a user-safe error message.
-- Reject non-object JSON (e.g. bare strings or arrays).
-- Reject `text` that is absent, non-string, blank after strip, or longer than 1 000 characters.
-- Reject `sender` that is non-string; silently truncate to 48 characters; default to `"Anonymous"`.
-- Return `None` for silently discarded frames (blank text).
-- Raise `ValueError` with a user-safe description for all other invalid payloads.
+## [Connection Manager](component-details/connection-manager.md)
 
-Dependencies:
-- Python standard library (`json`)
+Summary:
+- Process-local websocket registry and broadcast helper inside `backend/app/main.py`.
+- Owns fan-out behavior and dead-connection cleanup within a single process.
 
-Related docs:
-- [Chat API](component-actions/chat-api.md)
-- [Connection Manager](component-actions/connection-manager.md)
+High-level relationships:
+- Used by [Chat API](component-details/chat-api.md) for connect/disconnect/broadcast flow.
+- Constrains scalability and failover until [Build And Runtime Tooling](component-details/build-runtime-tooling.md) introduces a shared adapter path.
 
-## [Connection Manager](component-actions/connection-manager.md) (`backend/app/main.py`)
+## [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 
-Responsibilities:
-- Track connected WebSocket clients.
-- Fan-out/broadcast messages and clean dead connections.
+Summary:
+- Local build and runtime surface spanning `frontend/package.json`, `frontend/vite.config.js`, and `backend/requirements.txt`.
+- Governs how configuration, packaging, CI, and operational tooling will be introduced.
 
-Dependencies:
-- FastAPI `WebSocket`
+High-level relationships:
+- Enables environment/configuration needs for [Frontend UI](component-details/frontend-ui.md) and [Chat API](component-details/chat-api.md).
+- Enables deployment, observability, and scale-path work for [Connection Manager](component-details/connection-manager.md).
 
-Related docs:
-- [Chat API](component-actions/chat-api.md)
-- [Payload Validator](component-actions/payload-validator.md)
-- [Build And Runtime Tooling](component-actions/build-runtime-tooling.md)
+## Navigation
 
-## [Build And Runtime Tooling](component-actions/build-runtime-tooling.md)
-
-Frontend tooling (`frontend/package.json`):
-- Vite dev/build/preview scripts.
-- React plugin for Vite.
-
-Backend dependency manifest (`backend/requirements.txt`):
-- FastAPI and Uvicorn standard extras only.
-
-Related docs:
-- [Frontend UI](component-actions/frontend-ui.md)
-- [Chat API](component-actions/chat-api.md)
-- [Connection Manager](component-actions/connection-manager.md)
+- [Architecture Home](README.md)
 - [Next Steps](next-steps.md)
+- [System Overview](system-overview.md)

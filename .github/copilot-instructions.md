@@ -32,9 +32,9 @@ When enforcing architecture during implementation:
 Copilot should maintain these files in arch when missing, and keep them updated over time:
 - arch/README.md: wiki index and navigation.
 - arch/system-overview.md: goals, boundaries, context diagram narrative, and major runtime concerns.
-- arch/components.md: component catalog with responsibilities, dependencies, and ownership.
-- arch/next-steps.md: index of recommended next steps and actions, grouped by priority and linked to component-level action files.
-- arch/component-actions/<component-slug>.md: one file per identified component, containing component-specific next steps, risks, dependencies, open questions, and navigation links to related components/docs.
+- arch/components.md: high-level component index with concise descriptions, high-level relationships between components, and links to each component detail file.
+- arch/next-steps.md: index of recommended next steps and actions, grouped by priority and linked to the relevant component detail files.
+- arch/component-details/<component-slug>.md: one file per identified component, containing component-specific responsibilities, dependencies, risks, open questions, recommended actions, and navigation links to related components/docs.
 - arch/data-flow.md: key data flows, interfaces, and integration boundaries.
 - arch/decisions.md: lightweight ADR log (decision, status, date, rationale, consequences).
 - arch/risks.md: architecture risks, severity, likelihood, mitigation, and owner.
@@ -42,7 +42,7 @@ Copilot should maintain these files in arch when missing, and keep them updated 
 - arch/change-log.md: dated summary of wiki updates.
 
 If a file already exists, update in place and preserve human-authored sections whenever possible.
-If a component is identified in `arch/components.md`, it should also have a corresponding file in `arch/component-actions/` unless there is a documented reason not to.
+If a component is identified in `arch/components.md`, it should also have a corresponding file in `arch/component-details/` unless there is a documented reason not to.
 
 ## Update triggers
 
@@ -60,14 +60,15 @@ For architecture sync tasks:
 1. Scan code outside arch to detect structure, boundaries, dependencies, and runtime patterns.
 2. Update the architecture wiki files in arch.
    - Update `arch/next-steps.md` so recommended actions live in a dedicated index rather than being embedded only inside summary docs.
-   - Ensure each identified component has a matching `arch/component-actions/<component-slug>.md` file.
-   - Ensure `arch/components.md` links to each component action file, and each component action file links back to `arch/components.md`, `arch/next-steps.md`, and relevant related components/docs.
+   - Ensure each identified component has a matching `arch/component-details/<component-slug>.md` file.
+   - Ensure `arch/components.md` stays high-level and focuses on concise component summaries plus relationship descriptions between components.
+   - Ensure `arch/components.md` links to each component detail file, and each component detail file links back to `arch/components.md`, `arch/next-steps.md`, and relevant related components/docs.
 3. Record key changes in arch/change-log.md with date and short rationale.
 4. Record any uncertainty or inferred assumptions explicitly.
 5. Re-assess non-functional qualities and deployability implications; update arch/risks.md and arch/drift.md when gaps are found.
 6. Re-validate any embedded "what to do next" / "next steps" suggestions across arch docs against current code and assumptions; remove stale items, adjust priorities, and add evidence notes for changed recommendations.
-   - Move actionable recommendations out of incidental prose where practical and into `arch/next-steps.md` plus the relevant `arch/component-actions/<component-slug>.md` files.
-   - Re-rank global actions in `arch/next-steps.md` and component-local actions in each component file.
+   - Move actionable recommendations out of incidental prose where practical and into `arch/next-steps.md` plus the relevant `arch/component-details/<component-slug>.md` files.
+   - Re-rank global actions in `arch/next-steps.md` and component-local actions in each component detail file.
    - Check that component relationships are cross-linked where useful for navigation.
 
 For code generation tasks:
@@ -117,8 +118,9 @@ Before completing any architecture sync, verify:
 - [ ] Completed work from prior syncs has been moved to "Completed" sections with dates
 - [ ] Prioritized work lists have stale items removed and remaining items re-ranked
 - [ ] `arch/next-steps.md` has been updated and does not duplicate stale completed work
-- [ ] Every identified component in `arch/components.md` has a corresponding file in `arch/component-actions/`, or an explicit note explains why not
-- [ ] Cross-links between `arch/components.md`, `arch/next-steps.md`, and `arch/component-actions/*.md` are present and still valid
+- [ ] Every identified component in `arch/components.md` has a corresponding file in `arch/component-details/`, or an explicit note explains why not
+- [ ] `arch/components.md` remains a high-level relationship/index page rather than absorbing per-component deep detail
+- [ ] Cross-links between `arch/components.md`, `arch/next-steps.md`, and `arch/component-details/*.md` are present and still valid
 - [ ] Evidence in risk/drift tables reflects current code state; update status indicators (🔴/🟡/🟢) if code changes warrant it
 - [ ] Deployability assessment in system-overview.md has been re-evaluated against current infrastructure/CI/CD state
 - [ ] All ADRs are still valid; mark as "superseded" if new decisions override old ones
@@ -170,7 +172,8 @@ When unsure:
 - Prefer stable, low-entropy summaries over verbose prose.
 - Use visual structure intentionally: tables for scorecards, traffic-light icons for status, and diagrams where they improve comprehension.
 - Prefer markdown links for architecture file names, component names, and related docs when the link materially improves navigation.
-- `arch/next-steps.md` should serve as the top-level action index; `arch/component-actions/*.md` should hold component-local actions rather than repeating the full global list.
+- `arch/components.md` should stay concise and high-level: list components, summarize their relationships, and link to the per-component detail files.
+- `arch/next-steps.md` should serve as the top-level action index; `arch/component-details/*.md` should hold per-component detail and local actions rather than repeating the full global list.
 - Treat arch as the architecture source of truth for implementation guidance.
 - Treat code outside arch as the source of truth for what currently exists.
 - Continuously reconcile differences through documented decisions, risks, and drift notes.

@@ -1,5 +1,17 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 10)
+
+- Externalized the frontend websocket endpoint through `VITE_CHAT_WS_URL` in `frontend/src/App.jsx` and added `frontend/.env.example` as the documented local contract.
+- Updated top-level README run instructions with the deployment-time socket configuration contract and examples.
+- Re-ranked architecture priorities and mitigations to reflect that frontend endpoint configuration is now implemented while backend/deployment config conventions remain open.
+
+## 2026-04-23 (update 9)
+
+- Migrated the architecture wiki from `component-actions/` to `component-details/` so there is one dedicated detail file per identified component.
+- Reworked [components](components.md) into a high-level component relationship/index page with concise summaries and links to the per-component detail files.
+- Updated [README](README.md) and [next-steps](next-steps.md) so live navigation points to `component-details/` rather than the superseded action-file structure.
+
 ## 2026-04-23 (update 8)
 
 - Added [Next Steps](next-steps.md) as the dedicated top-level action index for architecture work.

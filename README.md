@@ -31,14 +31,20 @@ Backend endpoints:
 ```bash
 cd frontend
 npm install
+cp .env.example .env
 npm run dev
 ```
 
 Open `http://localhost:5173`.
 
+Frontend environment contract:
+- `VITE_CHAT_WS_URL`: full websocket URL used by the browser client.
+- Local default/example: `ws://localhost:8000/ws/chat`
+- Production example: `wss://chat.example.com/ws/chat`
+
 ## How it works
 
-- Frontend opens a WebSocket connection to `ws://localhost:8000/ws/chat`.
+- Frontend opens a WebSocket connection to `VITE_CHAT_WS_URL` and falls back to `ws://localhost:8000/ws/chat` when the env var is unset.
 - Client sends `{ sender, text }` payloads.
 - Backend broadcasts each valid message to all connected clients.
 - Join/leave events are sent as system messages.

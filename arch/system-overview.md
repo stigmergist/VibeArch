@@ -55,7 +55,7 @@ flowchart LR
 | Security | 🔴 weak | No auth; sender identity is client-supplied; payload validation exists but per-connection rate limiting and identity controls are absent. | Add authn/authz boundary and server-owned identity fields with rate limiting. |
 | Manageability | 🟡 watch | No CI workflow, no operational runbook/deployment scripts, and only basic application logging. | Add CI checks, structured logs, and minimal operational runbook. |
 | Flexibility | 🟢 good | Clean frontend/backend split and simple protocol permit iterative change. | Preserve separation while introducing schema/versioning and env config. |
-| Portability | 🟡 watch | Works locally but socket URL hard-coded to localhost and no container spec exists. | Move URL to env config and add Docker-based runtime packaging. |
+| Portability | 🟡 watch | Frontend socket URL is now environment-driven via `VITE_CHAT_WS_URL`, but no container spec or deployment packaging exists yet. | Add Docker-based runtime packaging and document environment injection per deployment target. |
 | Cost | 🟡 watch | Low current runtime footprint, but no cost controls/limits for future scaling. | Define deployment sizing defaults and autoscaling/capacity guardrails. |
 | Resilience | 🟡 watch | Backend cleanup is exception-safe, but the client has no reconnect/backoff logic and there are no automated failure-injection tests for disconnect/restart scenarios. | Add client reconnect/backoff policy and backend/frontend resilience tests around restart and disconnect behavior. |
 | Robustness | 🟡 watch | Invalid payloads are handled safely, but the wire contract is still implicit/unversioned and the app has no persisted recovery state. | Define a versioned message schema and add contract tests for malformed/edge-case inputs. |
@@ -79,7 +79,7 @@ flowchart LR
 
 ### Missing For Production Deployment
 
-- Configuration management for runtime endpoints (frontend currently hard-codes WebSocket URL).
+- Configuration management for runtime endpoints beyond the documented frontend `VITE_CHAT_WS_URL` contract (for example backend settings and deployment injection).
 - Secrets strategy (none defined yet).
 - CI/CD pipeline and automated test gate (no workflow files detected).
 - Observability baseline (structured logs, metrics, alerting).
@@ -90,7 +90,7 @@ flowchart LR
 
 - Target model: containerized frontend and backend on a managed platform with TLS termination and external pub/sub for scale.
 - Smallest path:
-	1. Introduce environment-based socket config (`VITE_CHAT_WS_URL`) and backend settings model.
+	1. Introduce backend settings model and deployment-time environment injection conventions around the documented frontend `VITE_CHAT_WS_URL` contract.
 	2. Add Dockerfiles and a simple compose/dev deployment profile.
 	3. Add CI pipeline for lint/test/build.
 	4. Add structured logging and minimum health/readiness checks.

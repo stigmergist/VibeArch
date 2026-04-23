@@ -1,17 +1,31 @@
-# Chat API Actions
+# Chat API
 
 ## Navigation
 
 - [Architecture Home](../README.md)
-- [Next Steps](../next-steps.md)
 - [Components](../components.md)
+- [Next Steps](../next-steps.md)
 - Related components: [Payload Validator](payload-validator.md), [Connection Manager](connection-manager.md), [Frontend UI](frontend-ui.md), [Build And Runtime Tooling](build-runtime-tooling.md)
 
 ## Scope
 
 Primary implementation: `backend/app/main.py`
 
-## Current Risks And Gaps
+## Responsibilities
+
+- Expose `GET /health` for basic health checks.
+- Expose `WS /ws/chat` for bidirectional chat transport.
+- Coordinate payload validation, broadcast flow, lifecycle cleanup, and server-side timestamps.
+
+## Dependencies
+
+- FastAPI
+- Uvicorn runtime
+- [Payload Validator](payload-validator.md)
+- [Connection Manager](connection-manager.md)
+- [Build And Runtime Tooling](build-runtime-tooling.md)
+
+## Risks And Gaps
 
 - No authentication or authorization boundary exists.
 - No rate limiting exists for repeated valid requests.
@@ -25,12 +39,6 @@ Primary implementation: `backend/app/main.py`
 3. Define a versioned message schema.
 4. Add websocket lifecycle tests and restart/disconnect regression coverage.
 5. Introduce structured logging and metrics hooks.
-
-## Dependencies
-
-- Depends on [Payload Validator](payload-validator.md) for protocol hardening.
-- Depends on [Connection Manager](connection-manager.md) for broadcast semantics and cleanup.
-- Depends on [Build And Runtime Tooling](build-runtime-tooling.md) for deployment, CI, and observability rollout.
 
 ## Open Questions
 
