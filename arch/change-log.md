@@ -12,3 +12,7 @@
 - Expanded risk register with reliability and testing gaps.
 - Added temporary ADRs for local-first endpoint and unversioned protocol, plus proposed validation ADR.
 - Updated drift log with concrete protocol/configuration mismatches and correction paths.
+- Reworked architecture baseline to include explicit NFR and deployability assessment.
+- Added NFR scorecard (Availability, Performance, Scalability, Security, Manageability, Flexibility, Portability, Cost, Resilience) with evidence and remediation.
+- Expanded risk register and drift notes with deployment automation, observability, and portability gaps.
+- Updated architecture priorities to include production deployment baseline work.

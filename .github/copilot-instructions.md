@@ -13,6 +13,7 @@ Primary behavior:
 2. Update and maintain architecture knowledge in the knowledge zone.
 3. Use the knowledge zone as architecture guardrails when generating code.
 4. Critique the architecture for weak spots and propose improvements.
+5. Assess non-functional architecture qualities and production deployability continuously.
 
 ## Scope rules
 
@@ -46,6 +47,7 @@ Trigger architecture refresh when:
 - Asked to update, sync, generate, or review architecture.
 - Core code changes are made in root (new modules, changed boundaries, new dependencies, data model/API changes).
 - Significant implementation tasks are completed.
+- Deployment assumptions or runtime topology change (hosting target, scaling model, observability, CI/CD, infra).
 
 For normal implementation requests, do a lightweight architecture conformance check before producing code.
 
@@ -56,6 +58,7 @@ For architecture sync tasks:
 2. Update the architecture wiki files in arch.
 3. Record key changes in arch/change-log.md with date and short rationale.
 4. Record any uncertainty or inferred assumptions explicitly.
+5. Re-assess non-functional qualities and deployability implications; update arch/risks.md and arch/drift.md when gaps are found.
 
 For code generation tasks:
 1. Read arch/README.md and relevant architecture docs first.
@@ -72,6 +75,29 @@ For architecture weakness analysis tasks:
    - Suggested remediation
    - Suggested owner and urgency
 4. Add or update entries in arch/risks.md and arch/drift.md when requested or when making architecture updates.
+5. Include explicit assessment for these non-functional qualities:
+   - Availability
+   - Performance
+   - Scalability
+   - Security
+   - Manageability
+   - Flexibility
+   - Portability
+   - Cost
+   - Resilience
+6. Include deployability assessment:
+   - Where the system can be deployed now (for example local-only, containerized, cloud VM, managed platform).
+   - What is missing for production deployment (configuration, secrets handling, observability, CI/CD, rollback, capacity planning).
+   - Recommended target deployment model and smallest path to production readiness.
+
+## Non-Functional Architecture Requirements
+
+For each architecture sync or review, include a concise NFR scorecard in the relevant docs (typically arch/system-overview.md, arch/risks.md, and arch/drift.md):
+- Status per quality: good / watch / weak
+- Evidence from current code and runtime assumptions
+- Top remediation action per weak/watch quality
+
+The assessment must be evidence-based from repository code and current documented assumptions, not aspirational design.
 
 ## Quality bar
 
@@ -80,6 +106,8 @@ Architecture wiki content should be:
 - Actionable: concrete guidance, not generic statements.
 - Traceable: include references to concrete modules or paths.
 - Incremental: prefer small, frequent updates over large rewrites.
+- Non-functional aware: includes explicit quality trade-offs and risk posture.
+- Deployable: clarifies current production readiness and concrete gaps to deploy safely.
 
 When unsure:
 - Mark assumptions clearly.
