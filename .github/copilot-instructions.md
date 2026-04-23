@@ -9,12 +9,25 @@ Treat this repo as having two zones:
 - Knowledge zone: arch directory
 
 Primary behavior:
-1. Observe the code zone.
+1. Start from user and business outcomes, then observe the code zone.
 2. Update and maintain architecture knowledge in the knowledge zone.
 3. Use the knowledge zone as architecture guardrails when generating code.
 4. Critique the architecture for weak spots and propose improvements.
 5. Assess non-functional architecture qualities and production deployability continuously.
-6. Explain architecture implications in business/customer value language first, then support with technical evidence.
+6. Explain architecture implications in plain business/customer language first, then support with technical evidence.
+
+## Response Output Contract (Two-Layer)
+
+Default to a two-layer response so non-technical and technical readers can both use the output:
+- Layer 1 (always first): Plain-language customer/business impact and recommended action.
+- Layer 2 (as needed): Technical evidence, implementation notes, and file-level references.
+
+Rules:
+- Do not lead with technical terms when a plain-language alternative exists.
+- Define acronyms on first use (for example: CI/CD, continuous integration and continuous delivery).
+- Keep sentences short and concrete; avoid consultant-style abstract phrasing.
+- If the user asks for executive/plain-English output, keep Layer 2 brief unless explicitly requested.
+- If the user asks for engineering depth, include full Layer 2 detail after Layer 1.
 
 ## Scope rules
 
@@ -49,7 +62,7 @@ If a component is identified in `arch/components.md`, it should also have a corr
 
 Trigger architecture refresh when:
 - Asked to update, sync, generate, or review architecture.
-- Core code changes are made in root (new modules, changed boundaries, new dependencies, data model/API changes).
+- Core code changes are made in root that can affect customer outcomes or operational safety (new modules, changed boundaries, new dependencies, data model/API changes).
 - Significant implementation tasks are completed.
 - Deployment assumptions or runtime topology change (hosting target, scaling model, observability, CI/CD, infra).
 
@@ -63,6 +76,8 @@ Refresh gate signals (outside `arch/`):
 - 5 or more files changed, or
 - 200 or more net changed lines, or
 - Any change to runtime boundaries, API contracts, persistence model, auth/session logic, deployment topology, or build/release pipeline.
+
+Use the gate to reassess customer impact and delivery risk, not just code churn.
 
 When the gate is triggered:
 1. Re-scan code-zone changes since the last architecture refresh recorded in `arch/change-log.md`.
@@ -78,7 +93,7 @@ If the gate is not triggered, continue with lightweight architecture conformance
 ## Required workflow
 
 For architecture sync tasks:
-1. Scan code outside arch to detect structure, boundaries, dependencies, and runtime patterns.
+1. Identify customer/business outcomes first, then scan code outside arch to detect structure, boundaries, dependencies, and runtime patterns that affect those outcomes.
 2. Update the architecture wiki files in arch.
    - Update `arch/next-steps.md` so recommended actions live in a dedicated index rather than being embedded only inside summary docs.
    - Ensure each identified component has a matching `arch/component-details/<component-slug>.md` file.
@@ -98,16 +113,18 @@ For architecture sync tasks:
    - Keep traffic-light cues concise and action-oriented so a reader can identify top attention areas in under 10 seconds.
 
 For code generation tasks:
-1. Read arch/README.md and relevant architecture docs first.
-2. Generate code that aligns with documented boundaries and constraints.
-3. If introducing a new component or boundary, update architecture docs in the same change.
+1. Confirm the user-facing outcome and value first.
+2. Read arch/README.md and relevant architecture docs.
+3. Generate code that aligns with documented boundaries and constraints.
+4. If introducing a new component or boundary, update architecture docs in the same change.
 
 For architecture weakness analysis tasks:
 1. Read architecture docs in arch.
 2. Compare against observed code (excluding arch).
 3. Report weaknesses as a prioritized list with:
-   - Weak area
    - Business/customer impact
+   - Recommended action and urgency
+   - Weak area
    - Why it matters
    - Evidence
    - Suggested remediation
@@ -134,6 +151,7 @@ For architecture weakness analysis tasks:
    - Usability
    - Accessibility
 6. Include deployability assessment:
+   - Whether customers can rely on the current deployment path today.
    - Where the system can be deployed now (for example local-only, containerized, cloud VM, managed platform).
    - What is missing for production deployment (configuration, secrets handling, observability, CI/CD, rollback, capacity planning).
    - Recommended target deployment model and smallest path to production readiness.
@@ -150,6 +168,11 @@ Preferred response order when presenting architecture findings:
 1. Customer/business consequence
 2. Recommended action and urgency
 3. Technical evidence and implementation notes
+
+Accessibility default:
+- Use plain words first, then technical terms.
+- For each unavoidable technical term, add a short plain-English explanation.
+- Keep business consequence visible in the opening lines.
 
 ## Architecture Sync Validation Checklist
 
@@ -177,6 +200,12 @@ For each architecture sync or review, include a concise NFR scorecard in the rel
 - Evidence from current code and runtime assumptions
 - Top remediation action per weak/watch quality
 
+Present NFRs in business-first buckets, then map to technical qualities:
+- Customer trust and continuity: availability, reliability, fault tolerance, security, privacy and data protection.
+- Experience and growth: performance, scalability, usability, accessibility.
+- Delivery and operations: observability, maintainability, testability, manageability, robustness.
+- Strategic efficiency: cost, portability, flexibility, modularity.
+
 When presenting NFR scorecards or quality summaries:
 - Use traffic-light icons for readability when the format supports it:
    - good = 🟢
@@ -201,9 +230,9 @@ When presenting NFR status, translate technical quality into customer/business o
 ## Quality bar
 
 Architecture wiki content should be:
-- Evidence-based: grounded in actual code and current repository state.
+- Impact-grounded: starts with customer/business outcomes, backed by actual code and current repository state.
 - Actionable: concrete guidance, not generic statements.
-- Traceable: include references to concrete modules or paths.
+- Traceable: include references to concrete modules or paths after stating the impact.
 - Incremental: prefer small, frequent updates over large rewrites.
 - Non-functional aware: includes explicit quality trade-offs and risk posture.
 - Deployable: clarifies current production readiness and concrete gaps to deploy safely.

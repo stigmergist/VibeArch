@@ -1,5 +1,23 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 26)
+
+- Resolved documentation drift for auth/session wording in `README.md` so it now reflects the supported DynamoDB-backed SAM/AWS session path instead of "in-memory session token" phrasing.
+- Updated `arch/drift.md` to mark this wording mismatch as resolved while retaining the remaining auth lifecycle gaps (refresh/rotation strategy and Axum helper path parity).
+- Gate result: change-volume gate not triggered (documentation-only update with no runtime, boundary, or contract change).
+
+## 2026-04-24 (update 25)
+
+- Ran an explicit architecture sync pass and revalidated `arch/next-steps.md`, `arch/risks.md`, and `arch/drift.md` against current code-zone evidence.
+- Scope reviewed: `README.md`, `backend/src/*.rs`, `backend/src/bin/*.rs`, `backend/tests/*.rs`, `backend/Makefile`, `frontend/src/*`, `infra/aws/template.yaml`, and `infra/aws/README.md`.
+- Gate result: change-volume gate not triggered for runtime/code-boundary changes in this pass (current unstaged change is instruction-language only in `.github/copilot-instructions.md`).
+- Stable vs changed: architecture priorities remained stable; no runtime boundary, persistence model, API contract, or deployment-topology change detected since the prior sync.
+- Re-ranked top 1-3 architecture actions remain:
+	1. Deployed AWS path validation (smoke coverage beyond local SAM)
+	2. CI/CD + observability + rollback baseline
+	3. Broader chat/reconnect integration and regression tests
+- Drift note still open: top-level `README.md` wording still says "in-memory session token" and should be aligned to the supported DynamoDB-backed SAM/AWS path.
+
 ## 2026-04-23 (update 24)
 
 - Improved cross-doc scanability by adding explicit traffic-light "Scan First" cue blocks to `arch/README.md`, `arch/system-overview.md`, `arch/risks.md`, and `arch/drift.md`.

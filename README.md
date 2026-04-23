@@ -118,7 +118,7 @@ Local/AWS backend shape:
 
 ## How it works
 
-- User creates an account or signs in from the frontend; the backend returns an in-memory session token with a fixed expiry timestamp.
+- User creates an account or signs in from the frontend; the backend returns a fixed-expiry session token backed by DynamoDB or DynamoDB Local in the supported SAM/AWS handler path.
 - Frontend opens a WebSocket connection to `VITE_CHAT_WS_URL?token=...` and falls back to `ws://127.0.0.1:3001/ws/chat` when the env var is unset.
 - Backend only accepts HTTP auth requests and websocket connections through the AWS-local path.
 - Client sends `{ text }` payloads only.

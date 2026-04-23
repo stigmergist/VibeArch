@@ -34,9 +34,8 @@
 - Intended: sessions should be bounded, revocable, and restricted to configured browser origins.
   - Observed (resolved 2026-04-23): sessions now have a fixed TTL, `POST /auth/logout` revokes tokens, backend CORS is narrowed to `ALLOWED_ORIGINS`, and WebSocket upgrades reject disallowed `Origin` headers. `backend/tests/auth_lifecycle.rs` covers expiry, logout revocation, and origin enforcement.
   - Observed (extended 2026-04-23): the supported SAM-local and AWS handler path now persists sessions in DynamoDB or DynamoDB Local.
-  - Observed (documentation drift 2026-04-23): top-level `README.md` still says auth returns an "in-memory session token" even though the supported runtime stores sessions in DynamoDB-backed state.
+  - Observed (resolved 2026-04-24): top-level `README.md` wording now matches the supported DynamoDB-backed SAM/AWS session path.
   - Remaining gap: there is still no refresh/rotation strategy, and the Axum helper path used in tests remains process-local.
-  - Proposed correction: update `README.md` wording so session behavior matches the supported SAM-local/AWS path.
   - Status: 🟡 partially resolved.
 
 - Intended: websocket handlers should fail safely and clean up reliably.
