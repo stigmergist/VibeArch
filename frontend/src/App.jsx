@@ -121,6 +121,30 @@ export default function App() {
     }
   };
 
+  const logout = async () => {
+    if (!session) {
+      return;
+    }
+
+    setStatusMessage('Signing out...');
+
+    try {
+      await fetch(`${authBaseUrl}/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+        },
+      });
+    } finally {
+      setConnected(false);
+      setSession(null);
+      setMessages([]);
+      setDraft('');
+      setPassword('');
+      setStatusMessage('Signed out.');
+    }
+  };
+
   const sendMessage = (event) => {
     event.preventDefault();
 
@@ -198,6 +222,9 @@ export default function App() {
             }}
           >
             {mode === 'register' ? 'Use existing account' : 'Create new account'}
+          </button>
+          <button type="button" disabled={!session} onClick={logout}>
+            Sign out
           </button>
         </form>
 

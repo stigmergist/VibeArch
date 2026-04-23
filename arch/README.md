@@ -22,7 +22,7 @@ This wiki is the architecture source of truth for the repository.
 
 - Frontend: React 18 + Vite app in `frontend/`
 - Backend: FastAPI + Uvicorn app in `backend/`
-- Auth/session: `POST /auth/register`, `POST /auth/login`, then token-authenticated WebSocket chat on `/ws/chat`
+- Auth/session: `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, fixed-lifetime bearer sessions, and token-authenticated WebSocket chat on `/ws/chat`
 - Persistence: none (ephemeral, in-memory only)
 
 ## NFR And Deployability Snapshot
@@ -44,6 +44,7 @@ This wiki is the architecture source of truth for the repository.
 
 ## Completed Recently
 
+- 2026-04-23: Added fixed-lifetime sessions, logout, origin restrictions, and backend auth lifecycle tests.
 - 2026-04-23: Added baseline Dockerfiles plus a local `docker compose` workflow for the container-first deployment path.
 - 2026-04-23: Added in-memory registration/login session tokens and made chat sender identity server-owned after auth.
 - 2026-04-23: Frontend websocket endpoint externalized via `VITE_CHAT_WS_URL` with documented local default/fallback.

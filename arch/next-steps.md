@@ -6,8 +6,8 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 1. Add backend and frontend automated tests around chat protocol validation, error handling, disconnects, and reconnect behavior.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
-2. Harden the auth/session lifecycle with logout, token expiry policy, origin restrictions, and automated coverage.
-   Related components: [Chat API](component-details/chat-api.md), [Frontend UI](component-details/frontend-ui.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
+2. Decide whether in-memory fixed-lifetime sessions should evolve into refreshable or persistent sessions for production.
+   Related components: [Chat API](component-details/chat-api.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 
 ## Medium Priority
 
@@ -24,6 +24,8 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 ## Completed Recently
 
+- 2026-04-23: Added fixed session expiry, `POST /auth/logout`, origin restrictions, and backend auth lifecycle tests.
+   Related components: [Chat API](component-details/chat-api.md), [Frontend UI](component-details/frontend-ui.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 - 2026-04-23: Added baseline Dockerfiles and a local `docker compose` workflow for frontend/backend containers.
    Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Frontend UI](component-details/frontend-ui.md), [Chat API](component-details/chat-api.md)
 - 2026-04-23: Added registration/login-backed session tokens and made `sender` server-owned after auth.

@@ -4,12 +4,13 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import secrets
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import List
+from datetime import datetime, timedelta, timezone
+from typing import Callable, List
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, Header, HTTPException, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.websockets import WebSocketState
@@ -22,6 +23,37 @@ MAX_TEXT_CHARS = 1_000         # max message body after stripping whitespace
 MAX_SENDER_CHARS = 48          # max display name length
 MAX_USERNAME_CHARS = 24
 MIN_PASSWORD_CHARS = 8
+DEFAULT_SESSION_TTL_SECONDS = 3_600
+DEFAULT_ALLOWED_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+)
+
+
+def _load_session_ttl_seconds() -> int:
+    raw_value = os.getenv("SESSION_TTL_SECONDS", str(DEFAULT_SESSION_TTL_SECONDS)).strip()
+    try:
+        ttl_seconds = int(raw_value)
+    except ValueError as exc:
+        raise RuntimeError("SESSION_TTL_SECONDS must be an integer.") from exc
+
+    if ttl_seconds <= 0:
+        raise RuntimeError("SESSION_TTL_SECONDS must be greater than zero.")
+
+    return ttl_seconds
+
+
+def _load_allowed_origins() -> tuple[str, ...]:
+    raw_value = os.getenv("ALLOWED_ORIGINS", ",".join(DEFAULT_ALLOWED_ORIGINS))
+    origins = tuple(origin.strip() for origin in raw_value.split(",") if origin.strip())
+    if not origins:
+        raise RuntimeError("ALLOWED_ORIGINS must contain at least one origin.")
+
+    return origins
+
+
+SESSION_TTL_SECONDS = _load_session_ttl_seconds()
+ALLOWED_ORIGINS = _load_allowed_origins()
 
 
 class RegisterRequest(BaseModel):
@@ -39,6 +71,7 @@ class SessionResponse(BaseModel):
     token: str
     username: str
     displayName: str
+    expiresAt: str
 
 
 @dataclass
@@ -54,6 +87,26 @@ class SessionIdentity:
     token: str
     username: str
     display_name: str
+    expires_at: datetime
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _is_allowed_origin(origin: str | None) -> bool:
+    return origin in ALLOWED_ORIGINS
+
+
+def _extract_bearer_token(authorization: str | None) -> str:
+    if authorization is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization header is required.")
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization must use a bearer token.")
+
+    return token.strip()
 
 
 def _normalize_username(raw: str) -> str:
@@ -135,8 +188,14 @@ class UserStore:
 
 
 class SessionStore:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        session_ttl_seconds: int = SESSION_TTL_SECONDS,
+        now_fn: Callable[[], datetime] = _utc_now,
+    ) -> None:
         self.sessions: dict[str, SessionIdentity] = {}
+        self.session_ttl_seconds = session_ttl_seconds
+        self.now_fn = now_fn
 
     def create(self, user: UserRecord) -> SessionIdentity:
         token = secrets.token_urlsafe(32)
@@ -144,12 +203,24 @@ class SessionStore:
             token=token,
             username=user.username,
             display_name=user.display_name,
+            expires_at=self.now_fn() + timedelta(seconds=self.session_ttl_seconds),
         )
         self.sessions[token] = identity
         return identity
 
     def get(self, token: str) -> SessionIdentity | None:
-        return self.sessions.get(token)
+        identity = self.sessions.get(token)
+        if identity is None:
+            return None
+
+        if identity.expires_at <= self.now_fn():
+            self.sessions.pop(token, None)
+            return None
+
+        return identity
+
+    def revoke(self, token: str) -> None:
+        self.sessions.pop(token, None)
 
 
 def _parse_and_validate(raw: str) -> dict | None:
@@ -216,9 +287,10 @@ class ConnectionManager:
 app = FastAPI(title="Simple Chat API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=list(ALLOWED_ORIGINS),
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 manager = ConnectionManager()
@@ -243,6 +315,7 @@ def register(payload: RegisterRequest) -> SessionResponse:
         token=session.token,
         username=session.username,
         displayName=session.display_name,
+        expiresAt=session.expires_at.isoformat(),
     )
 
 
@@ -258,15 +331,27 @@ def login(payload: LoginRequest) -> SessionResponse:
         token=session.token,
         username=session.username,
         displayName=session.display_name,
+        expiresAt=session.expires_at.isoformat(),
     )
+
+
+@app.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(authorization: str | None = Header(default=None)) -> Response:
+    token = _extract_bearer_token(authorization)
+    sessions.revoke(token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.websocket("/ws/chat")
 async def chat_socket(websocket: WebSocket) -> None:
+    if not _is_allowed_origin(websocket.headers.get("origin")):
+        await websocket.close(code=1008, reason="Origin not allowed.")
+        return
+
     token = websocket.query_params.get("token", "").strip()
     identity = sessions.get(token)
     if identity is None:
-        await websocket.close(code=1008, reason="Authentication required.")
+        await websocket.close(code=1008, reason="Authentication required or session expired.")
         return
 
     await manager.connect(websocket)

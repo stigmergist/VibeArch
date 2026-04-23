@@ -26,7 +26,12 @@ Backend endpoints:
 - Health check: `http://localhost:8000/health`
 - Register: `http://localhost:8000/auth/register`
 - Login: `http://localhost:8000/auth/login`
+- Logout: `http://localhost:8000/auth/logout`
 - Chat socket: `ws://localhost:8000/ws/chat`
+
+Backend auth/session settings:
+- `SESSION_TTL_SECONDS`: session lifetime in seconds. Default: `3600`.
+- `ALLOWED_ORIGINS`: comma-separated browser origin allowlist for HTTP auth requests and WebSocket upgrades. Defaults: `http://localhost:5173,http://127.0.0.1:5173`.
 
 ### 2. Start frontend (new terminal)
 
@@ -55,6 +60,7 @@ Container notes:
 - The frontend container serves the built app on port `5173` via Nginx.
 - The backend container serves FastAPI on port `8000`.
 - The compose file builds the frontend with `VITE_CHAT_WS_URL=ws://localhost:8000/ws/chat` so the browser can reach the backend through the host-mapped port.
+- The compose file also injects `ALLOWED_ORIGINS` and `SESSION_TTL_SECONDS` into the backend container.
 - If you change `VITE_CHAT_WS_URL`, rebuild the frontend image.
 
 Frontend environment contract:
@@ -66,10 +72,21 @@ Frontend environment contract:
 
 ## How it works
 
-- User creates an account or signs in from the frontend; the backend returns an in-memory session token.
+- User creates an account or signs in from the frontend; the backend returns an in-memory session token with a fixed expiry timestamp.
 - Frontend opens a WebSocket connection to `VITE_CHAT_WS_URL?token=...` and falls back to `ws://localhost:8000/ws/chat` when the env var is unset.
+- Backend only accepts HTTP auth requests and WebSocket upgrades from configured allowed browser origins.
 - Client sends `{ text }` payloads only.
 - Backend authenticates the socket from the session token and stamps `sender` from the authenticated identity.
+- Frontend can sign out by calling `POST /auth/logout` with `Authorization: Bearer <token>`.
 - Backend rejects any client payload that tries to send its own `sender` field.
 - Backend broadcasts each valid message to all connected clients.
 - Join/leave events are sent as system messages.
+
+## Automated Checks
+
+Backend auth/session lifecycle coverage:
+
+```bash
+cd backend
+./.venv/bin/python -m unittest tests.test_auth
+```

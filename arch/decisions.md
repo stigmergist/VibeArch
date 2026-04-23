@@ -71,3 +71,11 @@
 - Decision: Standardize on a container-first production target for both frontend and backend rather than pursuing a VM-first deployment model.
 - Rationale: Container packaging gives a repeatable runtime boundary, aligns with the documented managed-platform target, and reduces environment drift between development, CI, and deployment.
 - Consequences: Dockerfiles, compose/dev profiles, container-oriented CI checks, and environment injection conventions become the next packaging baseline; VM/manual deployment remains possible for ad hoc testing but is not the architecture target.
+
+## ADR-010: Use Fixed-Lifetime Bearer Sessions With Explicit Logout And Origin Allowlist
+
+- Status: accepted
+- Date: 2026-04-23
+- Decision: Keep auth lightweight by using in-memory bearer tokens with a fixed TTL, add `POST /auth/logout` for explicit revocation, and enforce an `ALLOWED_ORIGINS` allowlist for browser auth requests and WebSocket upgrades.
+- Rationale: This closes the immediate impersonation/session-lifecycle gap without introducing persistence or a more complex token infrastructure before the project needs it.
+- Consequences: Sessions now expire and can be revoked, browser origins are narrowed by configuration, and backend tests can validate the lifecycle. Sessions still reset on process restart and do not support refresh/rotation.

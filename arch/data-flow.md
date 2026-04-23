@@ -13,7 +13,7 @@ sequenceDiagram
    U->>F: Open app
    U->>F: Register or log in
    F->>A: POST /auth/register or /auth/login
-   A-->>F: { token, username, displayName }
+   A-->>F: { token, username, displayName, expiresAt }
    F->>B: Connect to /ws/chat?token=...
    B->>M: Register websocket
    B->>M: Broadcast join system event
@@ -29,15 +29,22 @@ sequenceDiagram
 1. User enters username/password and, for registration, a display name.
 2. Frontend derives the auth base URL from `VITE_CHAT_WS_URL` by switching the scheme from `ws` to `http` and replacing the trailing `/ws/chat` with `/auth`.
 3. Frontend calls `POST /auth/register` or `POST /auth/login`.
-4. Backend validates credentials, creates an in-memory session token, and returns `{ token, username, displayName }`.
+4. Backend validates credentials, creates an in-memory session token with a fixed expiry, and returns `{ token, username, displayName, expiresAt }`.
+
+## Flow: Logout
+
+1. Frontend sends `POST /auth/logout` with `Authorization: Bearer <token>`.
+2. Backend revokes the token from the in-memory session store.
+3. Future WebSocket connections with that token are rejected.
 
 ## Flow: Client Connect
 
 1. Browser loads frontend and constructs WebSocket client after a session token is available.
 2. Client connects to `ws://localhost:8000/ws/chat?token=...`.
-3. Backend looks up the session token and rejects the socket with close code `1008` when auth fails.
-4. Backend accepts authorized sockets and registers the connection.
-5. Backend broadcasts a system join event using the authenticated display name.
+3. Backend checks the request `Origin` header against the configured allowlist and rejects the socket with close code `1008` when the origin is not allowed.
+4. Backend looks up the session token, rejects expired or revoked sessions, and closes the socket with code `1008` when auth fails.
+5. Backend accepts authorized sockets and registers the connection.
+6. Backend broadcasts a system join event using the authenticated display name.
 
 ## Flow: Send Message
 
@@ -92,4 +99,5 @@ sequenceDiagram
 
 - Frontend <-> Backend boundary: HTTP JSON auth endpoints plus WebSocket JSON chat protocol.
 - Frontend runtime config boundary: `VITE_CHAT_WS_URL` must resolve to the backend `/ws/chat` endpoint; the frontend derives `/auth/*` from that same base.
+- Backend runtime config boundary: `ALLOWED_ORIGINS` and `SESSION_TTL_SECONDS` define browser origin restrictions and session expiry policy.
 - External systems: none.

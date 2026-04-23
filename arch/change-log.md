@@ -1,5 +1,11 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 14)
+
+- Synced the wiki to the hardened auth/session lifecycle: fixed session expiry, `POST /auth/logout`, configured origin restrictions, and backend auth lifecycle tests.
+- Updated risk, drift, and next-step entries to remove the now-completed lifecycle hardening task and narrow the remaining auth gaps to persistence, refresh/rotation, and broader integration coverage.
+- Updated the README and data-flow docs to describe `SESSION_TTL_SECONDS`, `ALLOWED_ORIGINS`, logout, and the backend test command.
+
 ## 2026-04-23 (update 13)
 
 - Added baseline container assets: `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, per-app `.dockerignore` files, and `compose.yaml`.

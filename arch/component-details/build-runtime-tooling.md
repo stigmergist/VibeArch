@@ -26,13 +26,13 @@ Primary implementation: `compose.yaml`, `frontend/Dockerfile`, `frontend/nginx.c
 
 - No CI workflow exists.
 - Local container packaging exists, but there are no production deployment manifests or runtime hardening conventions yet.
-- Frontend runtime configuration is now environment-driven for the socket URL, and auth endpoint discovery is derived from that same value, but backend settings and deployment injection conventions are still incomplete.
+- Frontend runtime configuration is environment-driven for the socket URL, and backend session/origin policy is environment-driven via `ALLOWED_ORIGINS` and `SESSION_TTL_SECONDS`, but broader deployment injection conventions are still incomplete.
 - Observability and release/rollback procedures are undocumented.
 
 ## Recommended Actions
 
 1. Add CI for build, test, and lint/type/syntax validation.
-2. Introduce backend environment-driven settings and document deployment-time injection for `VITE_CHAT_WS_URL`, allowed origins, and session policy.
+2. Extend and document deployment-time injection for `VITE_CHAT_WS_URL`, `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, and any future auth settings.
 3. Add production deployment manifests and container runtime hardening beyond the local compose profile.
 4. Add structured logging, metrics, and operational runbook content.
 5. Define release and rollback procedure.

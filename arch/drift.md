@@ -10,12 +10,17 @@
 
 - Intended: runtime configuration should be environment-aware.
   - Observed (resolved 2026-04-23): frontend now reads `VITE_CHAT_WS_URL` in `frontend/src/App.jsx` and falls back to the local default when unset.
-  - Remaining gap: backend runtime settings and deployment-time env injection conventions are still undocumented beyond the frontend socket contract and the UI's derived `/auth/*` expectation.
+  - Observed (extended 2026-04-23): backend now also reads `ALLOWED_ORIGINS` and `SESSION_TTL_SECONDS`, and `compose.yaml` injects those values for local container runs.
+  - Remaining gap: deployment-time env injection conventions beyond the current frontend socket contract and backend auth/session settings are still incomplete.
   - Status: 🟡 partially resolved.
 
 - Intended: sender identity should be server-owned after authentication.
   - Observed (resolved 2026-04-23): `POST /auth/register` and `POST /auth/login` now mint in-memory session tokens, `WS /ws/chat` requires `?token=...`, and `backend/app/main.py` rejects any client-supplied `sender` while stamping outbound messages from the authenticated display name.
-  - Remaining gap: user/session state is ephemeral, sessions have no logout or expiry, and CORS/origin policy remains permissive.
+  - Status: 🟢 fully resolved.
+
+- Intended: sessions should be bounded, revocable, and restricted to configured browser origins.
+  - Observed (resolved 2026-04-23): sessions now have a fixed TTL, `POST /auth/logout` revokes tokens, backend CORS is narrowed to `ALLOWED_ORIGINS`, and WebSocket upgrades reject disallowed `Origin` headers. `backend/tests/test_auth.py` covers expiry, logout revocation, and origin enforcement.
+  - Remaining gap: sessions are still process-local, with no refresh/rotation strategy or persistence across restarts.
   - Status: 🟡 partially resolved.
 
 - Intended: websocket handlers should fail safely and clean up reliably.
@@ -49,6 +54,6 @@
 
 ## Open Questions
 
-- Should sessions expire after a fixed lifetime, on browser close, or only on explicit logout?
+- Should the project eventually add token refresh/rotation, or keep the current fixed-lifetime re-login model?
 - Should reconnect include server-provided short history window?
 - Is this service intended to stay single-room, or should room/channel concepts be introduced?

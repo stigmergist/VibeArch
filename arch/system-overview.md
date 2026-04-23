@@ -15,9 +15,10 @@
 
 ## Runtime Context Narrative
 
-- Users open the React app, register or log in over HTTP, then connect over WebSocket with a session token.
+- Users open the React app, register or log in over HTTP, then connect over WebSocket with a fixed-lifetime session token.
 - Backend tracks active socket connections in memory.
 - Backend tracks registered users and active sessions in memory.
+- Backend enforces an origin allowlist for HTTP auth requests and WebSocket upgrades.
 - Incoming client messages are broadcast to all active clients with sender identity derived from the authenticated session.
 - Backend also emits system join/leave messages.
 - Health check is exposed at `GET /health`.
@@ -40,11 +41,11 @@ flowchart LR
 ## Major Runtime Concerns
 
 - Connection lifecycle management for disconnect/reconnect.
-- Session lifecycle management for registration, login, and token validation.
+- Session lifecycle management for registration, login, logout, token expiry, and token validation.
 - Input validation enforced via `_parse_and_validate()` (frame size, JSON parse, shape, field types, length limits).
 - Sender identity is now server-owned and rejected when supplied by clients.
 - Validation errors returned to sender only; no broadcast of rejected payloads.
-- Auth exists, but users/sessions are still in-memory only with no logout or token expiry.
+- Auth uses fixed-lifetime in-memory bearer sessions with logout support, but users/sessions are still process-local and reset on restart.
 - No data persistence or chat history retention.
 - Single-process memory model limits horizontal scalability.
 
@@ -61,7 +62,7 @@ flowchart LR
 | Availability | 🟡 watch | In-memory process-local state only; no data persistence; health check is static. | Add persistent message store and process supervision with graceful restart strategy. |
 | Performance | 🟡 watch | Broadcast loop sends per-connection sequentially from Python process memory; frame/shape limits exist but no throughput profiling or rate limiting is present. | Add per-connection rate limiting and basic latency/throughput measurements before feature growth. |
 | Scalability | 🟡 watch | `ConnectionManager` is process-local list; no shared state/pub-sub for multi-instance fan-out. | Introduce Redis pub/sub (or equivalent) for horizontal scale path. |
-| Security | 🟡 watch | Register/login and server-owned sender identity exist, with PBKDF2 password hashing and token-gated websocket access, but sessions do not expire, logout is absent, CORS is permissive, and rate limiting is still absent. | Add session expiry/logout, origin restrictions, and per-connection/auth rate limiting. |
+| Security | 🟡 watch | Register/login/logout, fixed session expiry, server-owned sender identity, configured origin allowlist, and token-gated websocket access exist, but rate limiting, token rotation, and stronger production secrets policy are still absent. | Add per-connection/auth rate limiting and decide whether token rotation or stronger session storage is required. |
 | Manageability | 🟡 watch | No CI workflow, no operational runbook/deployment scripts, and only basic application logging. | Add CI checks, structured logs, and minimal operational runbook. |
 | Flexibility | 🟢 good | Clean frontend/backend split and simple protocol permit iterative change. | Preserve separation while introducing schema/versioning and env config. |
 | Portability | 🟡 watch | Frontend socket URL is environment-driven and baseline Docker packaging now exists, but there are no production platform manifests or environment-specific deployment definitions yet. | Add production deployment manifests and document environment injection per deployment target. |
@@ -72,9 +73,9 @@ flowchart LR
 | Reliability | 🟡 watch | Core chat flow works in a single process, but messages are lost on restart, clients do not reconnect automatically, and there is no automated regression suite in-repo. | Add reconnect behavior, persistence strategy, and automated websocket regression tests. |
 | Fault Tolerance | 🟡 watch | The server tolerates malformed input and runtime exceptions within one process, but there is no redundancy, failover, or graceful degradation across process loss. | Add multi-instance/shared-state strategy and define restart/failover behavior. |
 | Observability | 🔴 weak | Only basic logger calls exist for rejected payloads and unexpected exceptions; no structured logs, metrics, tracing, or alerting are present. | Add structured logging, connection/error metrics, and alerting hooks. |
-| Testability | 🟡 watch | `_parse_and_validate()` and the socket handler are testable in isolation, but there is no committed automated backend/frontend test suite or CI execution. | Add backend websocket tests, frontend integration tests, and run them in CI. |
-| Maintainability | 🟡 watch | The codebase is small and documented, but hard-coded runtime config, no CI, and missing automated tests increase change risk over time. | Externalize config and add automated validation around build, protocol, and deployment assumptions. |
-| Privacy and Data Protection | 🟡 watch | No server-side persistence reduces retained user data, and auth is now required for identity, but there is no explicit privacy posture, TLS deployment requirement, or session lifecycle policy for production use. | Define privacy/data handling expectations and require authenticated, TLS-protected deployments with session controls. |
+| Testability | 🟡 watch | Backend auth lifecycle coverage now exists in `backend/tests/test_auth.py`, but broader websocket/chat regression coverage, frontend integration tests, and CI execution are still absent. | Extend tests to chat/reconnect paths and run them in CI. |
+| Maintainability | 🟡 watch | The codebase is small and documented, and backend session/origin settings are now environment-driven, but no CI and limited automated coverage still increase change risk over time. | Extend automated validation around chat flows and deployment assumptions, then add CI enforcement. |
+| Privacy and Data Protection | 🟡 watch | No server-side persistence reduces retained user data, and auth now includes logout, expiry, and origin restrictions, but there is still no explicit privacy posture or TLS deployment requirement for production use. | Define privacy/data handling expectations and require authenticated, TLS-protected deployments. |
 | Usability | 🟡 watch | The UI now supports registration/login and shows auth/socket state, but there is no reconnect UX, history window, or delivery-state feedback. | Add reconnect UX/status messaging and basic session continuity behavior. |
 | Accessibility | 🟡 watch | The UI uses native form controls and a visible label, but there is no `aria-live` support for new messages, no keyboard/accessibility audit, and color contrast has not been verified. | Add live-region announcements, keyboard/focus checks, and an accessibility review. |
 
@@ -89,7 +90,7 @@ flowchart LR
 
 ### Missing For Production Deployment
 
-- Configuration management for runtime endpoints and auth/session settings beyond the documented frontend `VITE_CHAT_WS_URL` contract and derived `/auth/*` expectation.
+- Configuration management beyond the current `VITE_CHAT_WS_URL`, `ALLOWED_ORIGINS`, and `SESSION_TTL_SECONDS` contract.
 - Production deployment manifests and runtime conventions beyond the local `docker compose` baseline.
 - Secrets strategy (none defined yet).
 - CI/CD pipeline and automated test gate (no workflow files detected).
@@ -101,7 +102,7 @@ flowchart LR
 
 - Target model: containerized frontend and backend on a managed platform with TLS termination and external pub/sub for scale.
 - Smallest path:
-	1. Introduce backend settings model and deployment-time environment injection conventions around the documented frontend `VITE_CHAT_WS_URL` contract, allowed origins, and session policy.
+	1. Extend the current backend settings model and deployment-time environment injection conventions around `VITE_CHAT_WS_URL`, `ALLOWED_ORIGINS`, and `SESSION_TTL_SECONDS`.
 	2. Add production-oriented container deployment manifests on top of the local compose baseline.
 	3. Add CI pipeline for lint/test/build.
 	4. Add structured logging and minimum health/readiness checks.

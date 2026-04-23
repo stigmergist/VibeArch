@@ -58,7 +58,7 @@ High-level relationships:
 ## [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 
 Summary:
-- Local build and runtime surface spanning `frontend/package.json`, `frontend/vite.config.js`, and `backend/requirements.txt`.
+- Local build and runtime surface spanning `compose.yaml`, frontend/backend Dockerfiles, and the app dependency manifests.
 - Governs how configuration, packaging, CI, and operational tooling will be introduced.
 
 High-level relationships:
