@@ -14,9 +14,10 @@
 
 ## Runtime Context Narrative
 
-- Users open the React app and connect over WebSocket to the backend.
+- Users open the React app, register or log in over HTTP, then connect over WebSocket with a session token.
 - Backend tracks active socket connections in memory.
-- Incoming client messages are broadcast to all active clients.
+- Backend tracks registered users and active sessions in memory.
+- Incoming client messages are broadcast to all active clients with sender identity derived from the authenticated session.
 - Backend also emits system join/leave messages.
 - Health check is exposed at `GET /health`.
 
@@ -24,18 +25,22 @@
 
 ```mermaid
 flowchart LR
-	Browser[Browser Client\nReact + Vite UI] <-->|WebSocket JSON\n/ws/chat| API[FastAPI App\nbackend/app/main.py]
+	Browser[Browser Client\nReact + Vite UI] -->|HTTP JSON\n/auth/register\n/auth/login| API[FastAPI App\nbackend/app/main.py]
+	Browser <-->|WebSocket JSON\n/ws/chat?token=...| API
 	Browser -->|HTTP asset requests| Vite[Vite Dev Server]
 	API -->|In-memory state| Manager[ConnectionManager\nprocess-local connection list]
+	API -->|In-memory state| Identity[UserStore + SessionStore\nprocess-local identities]
 	Monitor[Operator or Probe] -->|GET /health| API
 ```
 
 ## Major Runtime Concerns
 
 - Connection lifecycle management for disconnect/reconnect.
+- Session lifecycle management for registration, login, and token validation.
 - Input validation enforced via `_parse_and_validate()` (frame size, JSON parse, shape, field types, length limits).
+- Sender identity is now server-owned and rejected when supplied by clients.
 - Validation errors returned to sender only; no broadcast of rejected payloads.
-- No authentication or authorization in current scope.
+- Auth exists, but users/sessions are still in-memory only with no logout or token expiry.
 - No data persistence or chat history retention.
 - Single-process memory model limits horizontal scalability.
 
@@ -52,7 +57,7 @@ flowchart LR
 | Availability | 🟡 watch | In-memory process-local state only; no data persistence; health check is static. | Add persistent message store and process supervision with graceful restart strategy. |
 | Performance | 🟡 watch | Broadcast loop sends per-connection sequentially from Python process memory; frame/shape limits exist but no throughput profiling or rate limiting is present. | Add per-connection rate limiting and basic latency/throughput measurements before feature growth. |
 | Scalability | 🟡 watch | `ConnectionManager` is process-local list; no shared state/pub-sub for multi-instance fan-out. | Introduce Redis pub/sub (or equivalent) for horizontal scale path. |
-| Security | 🔴 weak | No auth; sender identity is client-supplied; payload validation exists but per-connection rate limiting and identity controls are absent. | Add authn/authz boundary and server-owned identity fields with rate limiting. |
+| Security | 🟡 watch | Register/login and server-owned sender identity exist, with PBKDF2 password hashing and token-gated websocket access, but sessions do not expire, logout is absent, CORS is permissive, and rate limiting is still absent. | Add session expiry/logout, origin restrictions, and per-connection/auth rate limiting. |
 | Manageability | 🟡 watch | No CI workflow, no operational runbook/deployment scripts, and only basic application logging. | Add CI checks, structured logs, and minimal operational runbook. |
 | Flexibility | 🟢 good | Clean frontend/backend split and simple protocol permit iterative change. | Preserve separation while introducing schema/versioning and env config. |
 | Portability | 🟡 watch | Frontend socket URL is now environment-driven via `VITE_CHAT_WS_URL`, but no container spec or deployment packaging exists yet. | Add Docker-based runtime packaging and document environment injection per deployment target. |
@@ -65,8 +70,8 @@ flowchart LR
 | Observability | 🔴 weak | Only basic logger calls exist for rejected payloads and unexpected exceptions; no structured logs, metrics, tracing, or alerting are present. | Add structured logging, connection/error metrics, and alerting hooks. |
 | Testability | 🟡 watch | `_parse_and_validate()` and the socket handler are testable in isolation, but there is no committed automated backend/frontend test suite or CI execution. | Add backend websocket tests, frontend integration tests, and run them in CI. |
 | Maintainability | 🟡 watch | The codebase is small and documented, but hard-coded runtime config, no CI, and missing automated tests increase change risk over time. | Externalize config and add automated validation around build, protocol, and deployment assumptions. |
-| Privacy and Data Protection | 🟡 watch | No server-side persistence reduces retained user data, but there is no explicit privacy posture, TLS deployment requirement, or authenticated identity boundary for production use. | Define privacy/data handling expectations and require authenticated, TLS-protected deployments. |
-| Usability | 🟡 watch | The UI exposes connection state, disables sending when disconnected, and shows server error messages, but there is no reconnect UX, history window, or delivery-state feedback. | Add reconnect UX/status messaging and basic session continuity behavior. |
+| Privacy and Data Protection | 🟡 watch | No server-side persistence reduces retained user data, and auth is now required for identity, but there is no explicit privacy posture, TLS deployment requirement, or session lifecycle policy for production use. | Define privacy/data handling expectations and require authenticated, TLS-protected deployments with session controls. |
+| Usability | 🟡 watch | The UI now supports registration/login and shows auth/socket state, but there is no reconnect UX, history window, or delivery-state feedback. | Add reconnect UX/status messaging and basic session continuity behavior. |
 | Accessibility | 🟡 watch | The UI uses native form controls and a visible label, but there is no `aria-live` support for new messages, no keyboard/accessibility audit, and color contrast has not been verified. | Add live-region announcements, keyboard/focus checks, and an accessibility review. |
 
 ## Deployability Assessment
@@ -79,7 +84,7 @@ flowchart LR
 
 ### Missing For Production Deployment
 
-- Configuration management for runtime endpoints beyond the documented frontend `VITE_CHAT_WS_URL` contract (for example backend settings and deployment injection).
+- Configuration management for runtime endpoints and auth/session settings beyond the documented frontend `VITE_CHAT_WS_URL` contract and derived `/auth/*` expectation.
 - Secrets strategy (none defined yet).
 - CI/CD pipeline and automated test gate (no workflow files detected).
 - Observability baseline (structured logs, metrics, alerting).
@@ -90,7 +95,7 @@ flowchart LR
 
 - Target model: containerized frontend and backend on a managed platform with TLS termination and external pub/sub for scale.
 - Smallest path:
-	1. Introduce backend settings model and deployment-time environment injection conventions around the documented frontend `VITE_CHAT_WS_URL` contract.
+	1. Introduce backend settings model and deployment-time environment injection conventions around the documented frontend `VITE_CHAT_WS_URL` contract, allowed origins, and session policy.
 	2. Add Dockerfiles and a simple compose/dev deployment profile.
 	3. Add CI pipeline for lint/test/build.
 	4. Add structured logging and minimum health/readiness checks.

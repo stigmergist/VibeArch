@@ -20,17 +20,17 @@
 
 - Status: accepted
 - Date: 2026-04-23
-- Decision: Do not persist messages/users in v1.
+- Decision: Do not persist messages, users, or session state in v1.
 - Rationale: Keep project simple for learning/prototyping.
-- Consequences: No history across refresh/restart; no horizontal scaling safety.
+- Consequences: No history across refresh/restart; accounts and sessions reset on restart; no horizontal scaling safety.
 
 ## ADR-004: Hard-Code WebSocket Endpoint For Local-First v1
 
-- Status: accepted (temporary)
+- Status: superseded
 - Date: 2026-04-23
 - Decision: Frontend uses a direct constant (`ws://localhost:8000/ws/chat`) in `frontend/src/App.jsx`.
 - Rationale: Minimize configuration overhead during initial bring-up.
-- Consequences: Environment portability is reduced; production readiness requires config externalization.
+- Consequences: Environment portability was reduced until `VITE_CHAT_WS_URL` replaced the hard-coded constant later the same day.
 
 ## ADR-005: Keep Message Contract Unversioned In v1
 
@@ -55,3 +55,11 @@
 - Decision: Wrap the entire chat socket handler in a nested try/except/finally: inner guards payload validation, middle catches `WebSocketDisconnect`, outer catches broad `Exception`. Finally block always runs disconnect and leave-message broadcast, with failure-to-broadcast also caught and logged.
 - Rationale: Ensure stale connections are never left in the manager registry, even under unexpected runtime errors. Structured logging of errors enables monitoring and post-incident analysis.
 - Consequences: Handler is resilient to any exception type; connection cleanup overhead is minimal. Broadcast-failure logging may generate high volume under network instability (mitigated by mature connection cleanup patterns at the ConnectionManager level).
+
+## ADR-008: Make Sender Identity Server-Owned After Auth
+
+- Status: accepted
+- Date: 2026-04-23
+- Decision: Add `POST /auth/register` and `POST /auth/login` endpoints that issue in-memory session tokens, require `token` on `WS /ws/chat`, and reject any client payload that includes a `sender` field.
+- Rationale: Prevent impersonation by moving identity ownership to the server while keeping the implementation simple enough for the current in-memory architecture.
+- Consequences: Message payloads are simpler (`{ text }`), frontend deployment must keep websocket and auth endpoints aligned, and auth state is still ephemeral until persistence/session lifecycle policy is added.

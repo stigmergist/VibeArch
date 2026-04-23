@@ -13,6 +13,7 @@ Primary implementation: `frontend/src/App.jsx`
 
 ## Responsibilities
 
+- Collect registration/login credentials and call the backend auth endpoints.
 - Open and maintain the browser WebSocket connection.
 - Render connection status, message list, and message composer.
 - Send user-authored messages to the backend as JSON.
@@ -28,20 +29,21 @@ Primary implementation: `frontend/src/App.jsx`
 
 ## Risks And Gaps
 
-- Socket URL is now environment-driven via `VITE_CHAT_WS_URL`, but deployment-time value management must stay documented and consistent.
+- Socket URL is now environment-driven via `VITE_CHAT_WS_URL`, and the UI derives `/auth/*` from that value, so deployment-time value management must stay documented and consistent.
 - There is no reconnect/backoff behavior after socket loss.
-- Sender identity is still user-supplied.
+- Session state is not persisted across refresh or explicit logout.
 - No accessibility support exists for announcing inbound messages to assistive technologies.
 
 ## Recommended Actions
 
 1. Add reconnect/backoff behavior with clear user-facing retry state.
-2. Add integration tests for connection lifecycle and error rendering.
-3. Prepare the UI for authenticated/server-owned identity.
+2. Add integration tests for auth flow, connection lifecycle, and error rendering.
+3. Decide whether session state should survive refresh/logout and align the UX accordingly.
 4. Add `aria-live` handling and keyboard-focused accessibility checks.
-5. Keep the `VITE_CHAT_WS_URL` contract aligned with deployment documentation and build tooling.
+5. Keep the `VITE_CHAT_WS_URL` and derived `/auth/*` contract aligned with deployment documentation and build tooling.
 
 ## Open Questions
 
 - Should reconnect automatically retry forever or stop after bounded attempts?
+- Should the UI persist the issued session token across refreshes or treat each load as a fresh sign-in?
 - Should the UI preserve unsent drafts across disconnect/reconnect?

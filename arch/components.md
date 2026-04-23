@@ -5,11 +5,11 @@ This page is the high-level component map for the repository. Per-component deta
 ## [Frontend UI](component-details/frontend-ui.md)
 
 Summary:
-- Browser-facing chat experience implemented in `frontend/src/App.jsx`.
+- Browser-facing auth and chat experience implemented in `frontend/src/App.jsx`.
 - Relies on [Chat API](component-details/chat-api.md) for the message contract and on [Frontend Styling](component-details/frontend-styling.md) for presentation.
 
 High-level relationships:
-- Consumes the websocket protocol exposed by [Chat API](component-details/chat-api.md).
+- Consumes the register/login HTTP endpoints and websocket protocol exposed by [Chat API](component-details/chat-api.md).
 - Shares UX/accessibility concerns with [Frontend Styling](component-details/frontend-styling.md).
 - Depends on [Build And Runtime Tooling](component-details/build-runtime-tooling.md) for environment configuration and test automation.
 
@@ -27,7 +27,7 @@ High-level relationships:
 
 Summary:
 - FastAPI websocket and health endpoint implementation in `backend/app/main.py`.
-- Orchestrates validation, connection lifecycle handling, and outbound message broadcast.
+- Orchestrates registration/login, session lookup, validation, connection lifecycle handling, and outbound message broadcast.
 
 High-level relationships:
 - Depends on [Payload Validator](component-details/payload-validator.md) for inbound protocol hardening.

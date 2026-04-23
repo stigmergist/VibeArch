@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const socketUrl = import.meta.env.VITE_CHAT_WS_URL || 'ws://localhost:8000/ws/chat';
+const authBaseUrl = socketUrl.replace(/^ws/i, 'http').replace(/\/ws\/chat$/, '/auth');
 
 function formatTime(iso) {
   const date = new Date(iso);
@@ -11,20 +12,44 @@ function formatTime(iso) {
 }
 
 export default function App() {
-  const [name, setName] = useState('Guest');
+  const [mode, setMode] = useState('login');
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [password, setPassword] = useState('');
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState([]);
   const [connected, setConnected] = useState(false);
+  const [session, setSession] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('Sign in to join the chat.');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const socketRef = useRef(null);
   const listRef = useRef(null);
 
   useEffect(() => {
-    const socket = new WebSocket(socketUrl);
+    if (!session) {
+      return undefined;
+    }
+
+    let shouldResetSession = true;
+    const socket = new WebSocket(`${socketUrl}?token=${encodeURIComponent(session.token)}`);
     socketRef.current = socket;
 
-    socket.onopen = () => setConnected(true);
-    socket.onclose = () => setConnected(false);
-    socket.onerror = () => setConnected(false);
+    socket.onopen = () => {
+      setConnected(true);
+      setStatusMessage(`Signed in as ${session.displayName}.`);
+    };
+    socket.onclose = () => {
+      setConnected(false);
+      socketRef.current = null;
+      if (shouldResetSession) {
+        setSession(null);
+        setStatusMessage('Connection closed. Sign in again to continue.');
+      }
+    };
+    socket.onerror = () => {
+      setConnected(false);
+      setStatusMessage('Unable to connect to chat. Check backend auth/session availability.');
+    };
 
     socket.onmessage = (event) => {
       const payload = JSON.parse(event.data);
@@ -32,9 +57,10 @@ export default function App() {
     };
 
     return () => {
+      shouldResetSession = false;
       socket.close();
     };
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (!listRef.current) {
@@ -47,6 +73,54 @@ export default function App() {
     return connected ? 'Connected' : 'Disconnected';
   }, [connected]);
 
+  const authenticate = async (event) => {
+    event.preventDefault();
+
+    if (!username.trim() || !password.trim() || (mode === 'register' && !displayName.trim())) {
+      setStatusMessage('Provide the required credentials before continuing.');
+      return;
+    }
+
+    setIsAuthenticating(true);
+    setStatusMessage(mode === 'register' ? 'Creating account...' : 'Signing in...');
+
+    try {
+      const response = await fetch(`${authBaseUrl}/${mode}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(
+          mode === 'register'
+            ? {
+                username,
+                password,
+                displayName,
+              }
+            : {
+                username,
+                password,
+              }
+        ),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.detail || 'Authentication failed.');
+      }
+
+      setSession(payload);
+      setDisplayName(payload.displayName);
+      setPassword('');
+      setMessages([]);
+    } catch (error) {
+      setSession(null);
+      setStatusMessage(error instanceof Error ? error.message : 'Authentication failed.');
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
   const sendMessage = (event) => {
     event.preventDefault();
 
@@ -57,7 +131,6 @@ export default function App() {
 
     socketRef.current.send(
       JSON.stringify({
-        sender: name.trim() || 'Guest',
         text,
       })
     );
@@ -77,14 +150,58 @@ export default function App() {
         </header>
 
         <div className="name-row">
-          <label htmlFor="name">Display name</label>
+          <label htmlFor="username">Username</label>
           <input
-            id="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
+            id="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
             maxLength={24}
+            disabled={connected || isAuthenticating}
           />
         </div>
+
+        <div className="name-row">
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            minLength={8}
+            disabled={connected || isAuthenticating}
+          />
+        </div>
+
+        {mode === 'register' && (
+          <div className="name-row">
+            <label htmlFor="display-name">Display name</label>
+            <input
+              id="display-name"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              maxLength={48}
+              disabled={connected || isAuthenticating}
+            />
+          </div>
+        )}
+
+        <form className="composer" onSubmit={authenticate}>
+          <button type="submit" disabled={connected || isAuthenticating}>
+            {mode === 'register' ? 'Create account' : 'Sign in'}
+          </button>
+          <button
+            type="button"
+            disabled={connected || isAuthenticating}
+            onClick={() => {
+              setMode((current) => (current === 'register' ? 'login' : 'register'));
+              setStatusMessage('');
+            }}
+          >
+            {mode === 'register' ? 'Use existing account' : 'Create new account'}
+          </button>
+        </form>
+
+        <p className="eyebrow">{statusMessage}</p>
 
         <ul className="messages" ref={listRef}>
           {messages.length === 0 && <li className="empty">No messages yet. Say hello.</li>}

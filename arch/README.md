@@ -22,12 +22,12 @@ This wiki is the architecture source of truth for the repository.
 
 - Frontend: React 18 + Vite app in `frontend/`
 - Backend: FastAPI + Uvicorn app in `backend/`
-- Transport: WebSocket chat on `/ws/chat`
+- Auth/session: `POST /auth/register`, `POST /auth/login`, then token-authenticated WebSocket chat on `/ws/chat`
 - Persistence: none (ephemeral, in-memory only)
 
 ## NFR And Deployability Snapshot
 
-- NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/manageability/portability/cost/robustness/reliability/fault tolerance/testability/maintainability/privacy and data protection/usability/accessibility, 🔴 weak in security/observability.
+- NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/security/manageability/portability/cost/robustness/reliability/fault tolerance/testability/maintainability/privacy and data protection/usability/accessibility, 🔴 weak in observability.
 - Deployability today: strong for local development, partial for cloud VM/manual deploy, not production-ready for managed/containerized operation yet.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
@@ -44,5 +44,6 @@ This wiki is the architecture source of truth for the repository.
 
 ## Completed Recently
 
+- 2026-04-23: Added in-memory registration/login session tokens and made chat sender identity server-owned after auth.
 - 2026-04-23: Frontend websocket endpoint externalized via `VITE_CHAT_WS_URL` with documented local default/fallback.
 - 2026-04-23: WebSocket resilience hardening completed with guaranteed disconnect/finally cleanup path and structured runtime error logging.

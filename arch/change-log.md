@@ -1,5 +1,11 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 11)
+
+- Synced the wiki to the new auth/session implementation: `POST /auth/register`, `POST /auth/login`, token-gated websocket access, and server-owned sender identity.
+- Updated the README and data-flow/system docs to describe the deployment-time contract that the configured websocket URL must align with the matching `/auth/*` endpoints.
+- Re-ranked risks and next steps to mark impersonation mitigated and focus follow-up work on session lifecycle hardening, tests, reconnect UX, and deployment config.
+
 ## 2026-04-23 (update 10)
 
 - Externalized the frontend websocket endpoint through `VITE_CHAT_WS_URL` in `frontend/src/App.jsx` and added `frontend/.env.example` as the documented local contract.

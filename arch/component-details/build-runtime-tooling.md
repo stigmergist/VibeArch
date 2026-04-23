@@ -26,14 +26,14 @@ Primary implementation: `frontend/package.json`, `frontend/vite.config.js`, `bac
 
 - No Dockerfiles or container orchestration/dev packaging exists.
 - No CI workflow exists.
-- Frontend runtime configuration is now environment-driven for the socket URL, but backend settings and deployment injection conventions are still incomplete.
+- Frontend runtime configuration is now environment-driven for the socket URL, and auth endpoint discovery is derived from that same value, but backend settings and deployment injection conventions are still incomplete.
 - Observability and release/rollback procedures are undocumented.
 
 ## Recommended Actions
 
 1. Add frontend/backend Dockerfiles and a simple local compose profile.
 2. Add CI for build, test, and lint/type/syntax validation.
-3. Introduce backend environment-driven settings and document deployment-time injection for `VITE_CHAT_WS_URL`.
+3. Introduce backend environment-driven settings and document deployment-time injection for `VITE_CHAT_WS_URL`, allowed origins, and session policy.
 4. Add structured logging, metrics, and operational runbook content.
 5. Define release and rollback procedure.
 

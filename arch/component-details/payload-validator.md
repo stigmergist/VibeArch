@@ -14,6 +14,7 @@ Primary implementation: `_parse_and_validate()` in `backend/app/main.py`
 ## Responsibilities
 
 - Enforce payload size, shape, type, and length rules before chat messages enter the broadcast flow.
+- Reject client attempts to supply server-owned fields such as `sender`.
 - Normalize accepted data into the message structure expected by the chat handler.
 
 ## Dependencies
@@ -30,7 +31,7 @@ Primary implementation: `_parse_and_validate()` in `backend/app/main.py`
 
 ## Recommended Actions
 
-1. Add automated tests for malformed payloads, length caps, and sender normalization.
+1. Add automated tests for malformed payloads, length caps, and server-owned sender rejection.
 2. Define/document a versioned schema or message contract.
 3. Coordinate with [Chat API](chat-api.md) on rate limiting and error envelope stability.
 
