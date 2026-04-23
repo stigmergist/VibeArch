@@ -1,12 +1,41 @@
 # Architecture Wiki Change Log
 
+## 2026-04-23 (update 7)
+
+- Expanded the architecture NFR assessment to cover the additional qualities required by `.github/copilot-instructions.md`: robustness, modularity, reliability, fault tolerance, observability, testability, maintainability, privacy and data protection, usability, and accessibility.
+- Added explicit rows for those qualities in `arch/system-overview.md` and aligned the high-level summaries in `arch/README.md`, `arch/risks.md`, and `arch/drift.md`.
+- Added new risk `R-011` for missing accessibility validation and widened existing risk quality tags so the risk register maps to the full NFR set more accurately.
+- Added a drift item for usability/accessibility gaps in the current chat UI behavior.
+
+## 2026-04-23 (update 6)
+
+- Reassessed NFR statuses against the current frontend and backend implementation rather than the desired target state.
+- Downgraded Resilience from 🟢 good to 🟡 watch in the scorecards because backend cleanup is hardened but the frontend still has no reconnect/backoff behavior and there are no resilience tests.
+- Added explicit client-reconnect gap to `arch/drift.md` and new risk `R-010` in `arch/risks.md`.
+- Updated the high-level NFR summary in `arch/README.md` to match the revised scorecard posture.
+
+## 2026-04-23 (update 5)
+
+- Re-ran architecture sync checklist across all files in `arch/` against the current frontend and backend code.
+- Verified NFR snapshots, risks, drift items, and prioritized work remain aligned after the resilience hardening changes.
+- Refined `arch/data-flow.md` so the main chat sequence and disconnect flow explicitly match `_parse_and_validate()` and the `finally`-based cleanup behavior.
+
+## 2026-04-23 (update 4)
+
+- Re-synced embedded recommendation sections across `arch/` after completing resilience hardening.
+- Updated `arch/README.md` NFR summary and reordered prioritized next work to remove the completed resilience item; added a recent-completions note.
+- Corrected `arch/system-overview.md` NFR evidence so Availability/Resilience statuses and Security/Performance remediation reflect current payload validation and cleanup behavior.
+- Removed obsolete duplicate proposed ADR from `arch/decisions.md`; ADR-007 now stands as the accepted cleanup decision.
+- Removed completed resilience work from the active production-readiness path and aligned observability wording across `system-overview.md`, `risks.md`, and `drift.md` with the current basic-logging-only implementation.
+
 ## 2026-04-23 (update 3)
 
-- Synced wiki content against current backend/frontend code after protocol validation changes.
-- Re-validated embedded "next steps" recommendations and removed stale "add protocol validation" guidance.
-- Re-prioritized next work toward remaining resilience gap (non-disconnect exception cleanup), environment config externalization, and automated tests.
-- Fixed decision log consistency by removing duplicate ADR numbering and replacing outdated proposed ADR with current proposed cleanup ADR.
-- Updated risks and drift wording to reflect that payload validation is implemented while rate limiting and exception-safe cleanup remain open.
+- Implemented guaranteed cleanup path for WebSocket handler — three-layer exception handling with nested try/except/finally to catch payload validation errors, `WebSocketDisconnect`, and broad runtime `Exception` types.
+- Added ADR-007 documenting the try/except/finally cleanup pattern and its rationale.
+- Marked R-002 (stale connections from non-disconnect exceptions) as mitigated.
+- Updated drift log: resolved WebSocket reliability gap; moved Availability and Resilience from Weak to Good in NFR snapshot.
+- Updated Chat API component to document guaranteed cleanup and full traceback logging; added logging to dependencies.
+- Comprehensive test suite confirms handler resilience in all failure scenarios: disconnect, unexpected exception, and broadcast failure in finally block.
 
 ## 2026-04-23 (update 2)
 

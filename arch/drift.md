@@ -2,9 +2,9 @@
 
 ## Quality Status Snapshot
 
-- 🔴 Weak: security (auth absent), availability (no finally path), resilience.
-- 🟡 Watch: performance (rate limiting absent), scalability, manageability, portability, cost.
-- 🟢 Good: flexibility, input validation.
+- 🔴 Weak: security, observability.
+- 🟡 Watch: availability, resilience, performance, scalability, manageability, portability, cost, robustness, reliability, fault tolerance, testability, maintainability, privacy and data protection, usability, accessibility.
+- 🟢 Good: flexibility, input validation, modularity.
 
 ## Intended vs Observed
 
@@ -14,9 +14,13 @@
   - Proposed correction: move socket URL to Vite env variable (`VITE_CHAT_WS_URL`).
 
 - Intended: websocket handlers should fail safely and clean up reliably.
-  - Observed (partially resolved 2026-04-23): `_parse_and_validate()` guards against malformed JSON and invalid shapes; validation errors are returned to sender only; the receive loop continues. `WebSocketDisconnect` is still the only caught exception for loop exit, so non-disconnect runtime failures may still skip cleanup.
-  - Remaining gap: add a broad `except Exception` with a guaranteed `manager.disconnect()` / `finally` path.
-  - Status: 🟡 partially resolved.
+  - Observed (resolved 2026-04-23): Three-layer exception handling: inner try/except guards payload validation, middle try/except catches `WebSocketDisconnect` gracefully, outer try/except/finally catches broad `Exception` and guarantees cleanup. Disconnect is always called, and failure to broadcast leave message is logged but doesn't crash.
+  - Status: 🟢 fully resolved.
+
+- Intended: clients should recover gracefully from transient socket loss or backend restarts.
+  - Observed: frontend sets `connected` false on `onclose`/`onerror`, but there is no reconnect/backoff logic in `frontend/src/App.jsx`.
+  - Impact: transient server restarts or network blips end the chat session until the user refreshes manually.
+  - Proposed correction: add reconnect/backoff policy with bounded retries and UX feedback for reconnect attempts.
 
 - Intended: public message contract should have explicit evolution path.
   - Observed: protocol is implicit/unversioned in UI and backend logic.
@@ -29,9 +33,14 @@
   - Proposed correction: add container packaging and CI pipeline with build/test gates.
 
 - Intended: operational behavior should be observable.
-  - Observed: no explicit structured logging, metrics, or alert hooks in backend.
+  - Observed: backend now emits basic application log messages for rejected payloads and unexpected runtime exceptions, but no structured logging, metrics, or alert hooks exist.
   - Impact: incident detection and diagnosis would be slow in production.
   - Proposed correction: introduce structured logs and minimal telemetry (latency, connection count, error rate).
+
+- Intended: the chat experience should remain usable and accessible when messages arrive, validation errors occur, or connectivity changes.
+  - Observed: the UI shows connection state and validation errors, but it has no reconnect UX, no assistive-tech announcement path for incoming messages, and no documented accessibility verification.
+  - Impact: users can be stranded after disconnects, and assistive-technology users may not be notified of new chat activity.
+  - Proposed correction: add reconnect status UX, `aria-live` support for message updates, and an accessibility audit.
 
 ## Open Questions
 

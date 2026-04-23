@@ -25,16 +25,18 @@ Dependencies:
 
 Responsibilities:
 - Expose `GET /health` for simple health checks.
-- Expose `WS /ws/chat` for bi-directional chat transport.
+- Expose `WS /ws/chat` for bi-directional chat transport with guaranteed cleanup via try/except/finally.
 - Enforce inbound payload protocol via `_parse_and_validate()` (see below).
 - Route validation errors back to the originating client only; never broadcast them.
 - Broadcast well-formed messages to all connected clients.
 - Generate server-side event timestamps (`sentAt`).
+- Catch `WebSocketDisconnect` cleanly and log unexpected runtime exceptions with full traceback context.
 
 Dependencies:
 - FastAPI
 - Uvicorn runtime
 - In-memory connection registry (`ConnectionManager`)
+- Python standard library (`logging`)
 
 ## Payload Validator (`backend/app/main.py` — `_parse_and_validate`)
 

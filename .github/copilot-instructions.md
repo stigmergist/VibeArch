@@ -86,10 +86,32 @@ For architecture weakness analysis tasks:
    - Portability
    - Cost
    - Resilience
+   - Robusteness
+   - Modularity
+   - Reliability
+   - Fault Tolerance
+   - Observability
+   - Testability  
+   - Maintainability
+   - Privacy and Data Protection
+   - Usability
+   - Accessibility
 6. Include deployability assessment:
    - Where the system can be deployed now (for example local-only, containerized, cloud VM, managed platform).
    - What is missing for production deployment (configuration, secrets handling, observability, CI/CD, rollback, capacity planning).
    - Recommended target deployment model and smallest path to production readiness.
+
+## Architecture Sync Validation Checklist
+
+Before completing any architecture sync, verify:
+- [ ] All files in arch/ have been reviewed for embedded recommendations, TODOs, and next-steps language
+- [ ] Completed work from prior syncs has been moved to "Completed" sections with dates
+- [ ] Prioritized work lists have stale items removed and remaining items re-ranked
+- [ ] Evidence in risk/drift tables reflects current code state; update status indicators (🔴/🟡/🟢) if code changes warrant it
+- [ ] Deployability assessment in system-overview.md has been re-evaluated against current infrastructure/CI/CD state
+- [ ] All ADRs are still valid; mark as "superseded" if new decisions override old ones
+- [ ] NFR scorecard evidence lines reference actual current code paths or runtime behavior
+- [ ] Change log includes entry for this sync pass with specific file updates and rationale
 
 ## Non-Functional Architecture Requirements
 
@@ -127,6 +149,7 @@ When unsure:
 - Mark assumptions clearly.
 - Ask for clarification only when ambiguity blocks safe progress.
 - Avoid inventing architecture not supported by code or explicit decisions.
+
 
 ## LLM-wiki style constraints
 

@@ -15,7 +15,7 @@ sequenceDiagram
    B->>M: Broadcast join system event
    U->>F: Submit message
    F->>B: Send JSON { sender, text }
-   B->>B: Parse JSON and normalize payload
+   B->>B: Validate and normalize via _parse_and_validate()
    B->>M: Broadcast message event
    M-->>F: send_json(payload)
 ```
@@ -70,9 +70,11 @@ sequenceDiagram
 
 ## Flow: Disconnect
 
-1. Socket disconnect detected by backend.
-2. Backend removes client from connection registry.
-3. Backend broadcasts a system leave event.
+1. The WebSocket handler exits because of client disconnect or another runtime failure.
+2. Backend enters the `finally` cleanup path.
+3. Backend removes the client from the in-memory connection registry if still present.
+4. Backend attempts to broadcast a system leave event to remaining clients.
+5. If leave-message broadcast fails, backend logs the error and preserves cleanup completion.
 
 ## Integration Boundaries
 

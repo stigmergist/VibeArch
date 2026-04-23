@@ -102,39 +102,61 @@ async def chat_socket(websocket: WebSocket) -> None:
     await manager.broadcast(join_message)
 
     try:
-        while True:
-            raw = await websocket.receive_text()
+        try:
+            while True:
+                raw = await websocket.receive_text()
 
+                try:
+                    validated = _parse_and_validate(raw)
+                except ValueError as exc:
+                    # Send a structured error back to the sender only; do not broadcast.
+                    if websocket.application_state == WebSocketState.CONNECTED:
+                        await websocket.send_json({
+                            "type": "error",
+                            "text": str(exc),
+                            "sentAt": datetime.now(timezone.utc).isoformat(),
+                        })
+                    logger.warning("Rejected WebSocket payload: %s", exc)
+                    continue
+
+                if validated is None:
+                    # Silently discard (e.g. blank message after strip).
+                    continue
+
+                message = {
+                    "type": "message",
+                    "sender": validated["sender"],
+                    "text": validated["text"],
+                    "sentAt": datetime.now(timezone.utc).isoformat(),
+                }
+                await manager.broadcast(message)
+
+        except WebSocketDisconnect:
+            # Clean disconnect path (explicit client close or server-initiated).
+            pass
+
+    except Exception as exc:
+        # Unexpected runtime error: log context for debugging, monitoring, and alerting.
+        logger.error(
+            "Unexpected exception in chat socket handler: %s",
+            exc,
+            exc_info=True,
+        )
+
+    finally:
+        # Guaranteed cleanup: remove from connection registry and notify others.
+        if websocket in manager.connections:
+            manager.disconnect(websocket)
             try:
-                validated = _parse_and_validate(raw)
-            except ValueError as exc:
-                # Send a structured error back to the sender only; do not broadcast.
-                if websocket.application_state == WebSocketState.CONNECTED:
-                    await websocket.send_json({
-                        "type": "error",
-                        "text": str(exc),
-                        "sentAt": datetime.now(timezone.utc).isoformat(),
-                    })
-                logger.warning("Rejected WebSocket payload: %s", exc)
-                continue
-
-            if validated is None:
-                # Silently discard (e.g. blank message after strip).
-                continue
-
-            message = {
-                "type": "message",
-                "sender": validated["sender"],
-                "text": validated["text"],
-                "sentAt": datetime.now(timezone.utc).isoformat(),
-            }
-            await manager.broadcast(message)
-
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        leave_message = {
-            "type": "system",
-            "text": "A user left the chat",
-            "sentAt": datetime.now(timezone.utc).isoformat(),
-        }
-        await manager.broadcast(leave_message)
+                leave_message = {
+                    "type": "system",
+                    "text": "A user left the chat",
+                    "sentAt": datetime.now(timezone.utc).isoformat(),
+                }
+                await manager.broadcast(leave_message)
+            except Exception as bcast_exc:
+                logger.error(
+                    "Failed to broadcast leave message: %s",
+                    bcast_exc,
+                    exc_info=True,
+                )

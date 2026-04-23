@@ -48,10 +48,10 @@
 - Rationale: Prevent malformed or oversized frames from crashing the socket handler or being broadcast; return structured error responses to the sender only rather than silently dropping or propagating.
 - Consequences: Protocol constraints are now documented constants (`MAX_FRAME_BYTES`, `MAX_TEXT_CHARS`, `MAX_SENDER_CHARS`). Rate limiting is not yet covered and is a known remaining gap (see R-003).
 
-## ADR-007: Add Full Exception-Safe Cleanup In WebSocket Loop
+## ADR-007: Guaranteed Cleanup with Try/Except/Finally Pattern
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-04-23
-- Decision: Add a broad exception handling/finally path in `chat_socket` to ensure connections are removed even on non-disconnect runtime failures.
-- Rationale: Current validation guards malformed payloads, but unexpected runtime exceptions can still bypass immediate cleanup.
-- Consequences: Improves availability/resilience posture and reduces stale connection risk.
+- Decision: Wrap the entire chat socket handler in a nested try/except/finally: inner guards payload validation, middle catches `WebSocketDisconnect`, outer catches broad `Exception`. Finally block always runs disconnect and leave-message broadcast, with failure-to-broadcast also caught and logged.
+- Rationale: Ensure stale connections are never left in the manager registry, even under unexpected runtime errors. Structured logging of errors enables monitoring and post-incident analysis.
+- Consequences: Handler is resilient to any exception type; connection cleanup overhead is minimal. Broadcast-failure logging may generate high volume under network instability (mitigated by mature connection cleanup patterns at the ConnectionManager level).
