@@ -1,5 +1,18 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 35)
+
+- Ran a full supply chain vulnerability audit for backend (Rust), frontend (Node.js), and Python dependencies.
+- Findings: 3 moderate advisories in Rust (`rustls-webpki` via AWS SDK); 5 moderate advisories in Node.js (`vite`, `esbuild`, `vitest`); no actionable Python vulnerabilities.
+- Added R-016 to `.arch/risks.md` and appended evidence section with details and remediation steps.
+- Scope reviewed: `backend/Cargo.toml`, `backend/Cargo.lock`, `frontend/package.json`, `frontend/package-lock.json`, `.arch/risks.md`.
+- Trigger signal: user request for full architecture rerun and vulnerability check; supply chain risk posture update.
+- Stable vs changed: core architecture and boundaries unchanged; risk posture updated to reflect new supply chain evidence.
+- Re-ranked top 1-3 architecture actions remain:
+	1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+	2. CI/CD + alarm routing + rollback baseline
+	3. Message-retention, privacy, and capacity guardrails for the new persisted history path
+
 ## 2026-04-24 (update 34)
 
 - Migrated the architecture wiki folder from `arch/` to `.arch/` to improve discoverability, reduce accidental edits, and align with hidden knowledge-zone conventions.

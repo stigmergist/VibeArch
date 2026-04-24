@@ -135,6 +135,7 @@ For architecture weakness analysis tasks:
    - Performance
    - Scalability
    - Security
+  -  Vulnerability including library dependency checking
    - Manageability
    - Flexibility
    - Portability
@@ -150,6 +151,7 @@ For architecture weakness analysis tasks:
    - Privacy and Data Protection
    - Usability
    - Accessibility
+   For “Vulnerability including library dependency checking,” confirm that all dependencies are checked for known vulnerabilities using appropriate tools for each language or package manager. Document any unresolved high/critical advisories in arch/risks.md.
 6. Include deployability assessment:
    - Whether customers can rely on the current deployment path today.
    - Where the system can be deployed now (for example local-only, containerized, cloud VM, managed platform).
@@ -188,6 +190,7 @@ Before completing any architecture sync, verify:
 - [ ] Deployability assessment in system-overview.md has been re-evaluated against current infrastructure/CI/CD state
 - [ ] All ADRs are still valid; mark as "superseded" if new decisions override old ones
 - [ ] NFR scorecard evidence lines reference actual current code paths or runtime behavior
+- [ ] Confirm that supply chain vulnerability checks (e.g., dependency audits) have been run and are clean, or document exceptions in arch/risks.md.
 - [ ] Change log includes entry for this sync pass with specific file updates and rationale
 - [ ] Change-volume gate has been evaluated; if triggered, `arch/change-log.md` records the trigger signal, review scope, and reprioritized actions
 - [ ] `arch/README.md`, `arch/system-overview.md`, `arch/risks.md`, and `arch/drift.md` include `## Scan First (Traffic Light)` sections with 🔴/🟡/🟢 bullets in the required order

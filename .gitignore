@@ -40,3 +40,4 @@ target/
 
 # Obsidian workspace metadata
 arch/.obsidian/
+.arch/.obsidian/workspace.json

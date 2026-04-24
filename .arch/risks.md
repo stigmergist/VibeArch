@@ -29,8 +29,21 @@
 | R-013 | The chosen AWS Lambda production target now has a real implementation in the shared crate, and a deployed smoke harness exists, but it has not yet been validated consistently through deployed smoke runs, CI, or production observability | Portability, Deployability, Scalability, Reliability                   | Medium   | Medium     | Run deployed smoke validation as part of release checks, then add CI checks and operational telemetry before production rollout | Platform owner   |
 | R-014 | AWS API Gateway WebSocket pricing adds connection-minute cost, so the pay-per-use expectation can be misunderstood                                                                                                                          | Cost                                                                   | Medium   | Medium     | Model expected concurrent usage and set CloudWatch budgets/alarms before production rollout                                     | Platform owner   |
 | R-015 | Recent conversation history now persists and replays into the UI, but message-retention policy, privacy rules, and read/write capacity guardrails for the `Messages` table are still undefined                                           | Privacy and Data Protection, Cost, Availability, Usability             | Medium   | Medium     | Define retention/privacy policy, validate history query load, and add table capacity/cost monitoring                           | Platform owner   |
+| R-016 | Supply chain vulnerabilities detected in backend (Rust) and frontend (Node.js) dependencies. Rust: 3 moderate advisories in `rustls-webpki` (transitive via AWS SDK). Node.js: 5 moderate advisories in `vite`, `esbuild`, `vitest`. | Security, Reliability, Manageability                                   | Medium   | Medium     | Schedule dependency upgrades for backend and frontend; monitor for upstream fixes in AWS SDK and major package updates.         | Platform owner   |
 
 ## NFR Hotspots
 
 - 🟡 Watch: Availability, Resilience, Performance, Scalability, Security, Manageability, Portability, Cost, Observability, Robustness, Reliability, Fault Tolerance, Testability, Maintainability, Privacy and Data Protection, Usability, Accessibility.
 - 🟢 Good: Flexibility, Input Validation (frame size, JSON shape, field limits hardened), Modularity.
+
+---
+
+## Supply Chain Vulnerability Evidence (2026-04-24)
+
+- **Rust (backend):**
+	- 3 moderate vulnerabilities in `rustls-webpki` (transitive via AWS SDK): reachable panic, name constraint issues ([RUSTSEC-2026-0104](https://rustsec.org/advisories/RUSTSEC-2026-0104), [RUSTSEC-2026-0098], [RUSTSEC-2026-0099]).
+	- Solution: Upgrade `rustls-webpki` to >=0.103.13 (requires upstream AWS SDK update).
+- **Node.js (frontend):**
+	- 5 moderate vulnerabilities in `vite`, `esbuild`, `vitest`, and related packages.
+	- Solution: Upgrade `vite` to 8.0.10+ and `vitest` to 4.1.5+ (major version bumps required).
+- **Python:** No actionable vulnerabilities found (no requirements.txt or Pipfile; only utility packages installed).
