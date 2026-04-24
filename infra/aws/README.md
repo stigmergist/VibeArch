@@ -74,6 +74,9 @@ flowchart LR
    - DynamoDB `Users`, `Sessions`, and `Connections` tables
    - API Gateway HTTP API routes for `POST /auth/register`, `POST /auth/login`, and `POST /auth/logout`
    - API Gateway WebSocket routes for `$connect`, `$disconnect`, and `$default`
+   - explicit Lambda log groups with retention controls
+   - a CloudWatch dashboard for Lambda, DynamoDB, and structured-log views
+   - baseline CloudWatch alarms for Lambda errors and DynamoDB throttling
 - `../../backend/` now contains both the local Axum server and the Lambda binaries wired by the SAM template.
 
 ## Current Handler Status
@@ -158,9 +161,32 @@ cd backend
 SMOKE_AUTH_BASE_URL=https://.../auth SMOKE_CHAT_WS_URL=wss://.../prod make aws-deployed-smoke
 ```
 
+## CloudWatch Monitoring Baseline
+
+The SAM stack now provisions a minimum monitoring baseline for the deployed backend:
+
+- one retained CloudWatch log group per Lambda function
+- a dashboard named `<stack-name>-simple-chat-service`
+- alarms for Lambda function errors and DynamoDB throttled requests
+
+The dashboard combines native Lambda and DynamoDB metrics with CloudWatch Logs Insights widgets that summarize the structured JSON auth and websocket events emitted by the backend.
+
+You can retrieve the dashboard name from the stack outputs:
+
+```bash
+aws cloudformation describe-stacks \
+   --stack-name <your-stack-name> \
+   --query "Stacks[0].Outputs[?OutputKey=='CloudWatchDashboardName'].OutputValue" \
+   --output text
+```
+
+Current limitation:
+
+- the alarms do not yet include SNS or incident-routing actions; they establish the baseline signals and thresholds first
+
 ## Remaining Work
 
 1. Run the deployed smoke path against a real AWS stack and keep it in the release checklist.
-2. Decide whether to provide a local API Gateway Management API shim for full websocket fan-out during local invocation.
-3. Add CI/CD and observability for the AWS target.
+2. Attach the CloudWatch alarms to SNS or the chosen incident-routing path and tune thresholds from real traffic.
+3. Add CI/CD and release automation for the AWS target.
 4. Update frontend production env vars for deployed AWS endpoints.

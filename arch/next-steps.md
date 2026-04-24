@@ -6,7 +6,7 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 - Protect user trust at launch: prove the deployed AWS auth and chat path works end to end before calling production readiness.
 - Reduce support burden and delivery risk: add broader automated coverage so regressions are caught before users see them.
-- Improve recovery speed and operational confidence: add CI/CD gates, deployed alerting, and rollback procedure on top of the new telemetry baseline.
+- Improve recovery speed and operational confidence: add CI/CD gates, alarm routing, and rollback procedure on top of the new telemetry baseline.
 
 ## Priority Legend
 
@@ -20,7 +20,7 @@ This file is the top-level index for recommended architecture work. Component-sp
    Related components: [Chat API](component-details/chat-api.md), [Connection Manager](component-details/connection-manager.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 2. Reduce customer-facing regressions and support churn by enforcing the growing backend and frontend regression suites in CI and extending them to the deployed serverless release flow.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
-3. Improve release confidence and incident recovery by adding CI/CD, deployed alerting, and rollback procedure for the serverless target now that structured logs and minimum telemetry exist.
+3. Improve release confidence and incident recovery by adding CI/CD, alarm routing, and rollback procedure for the serverless target now that dashboards and baseline alarms exist.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Frontend UI](component-details/frontend-ui.md)
 
 ## 🟡 Medium Priority
@@ -34,6 +34,8 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 ## 🟢 Completed Recently
 
+- 2026-04-24: Added explicit Lambda log retention plus a CloudWatch dashboard and baseline alarms to the AWS SAM stack so deployed auth/chat telemetry has an immediate operator view.
+   Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 - 2026-04-24: Added structured JSON logs for auth, websocket, and broadcast paths, plus minimum service/SLO telemetry in the local health response.
    Related components: [Chat API](component-details/chat-api.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 - 2026-04-24: Added frontend Vitest coverage for reconnect and outbound payload shape, plus backend websocket tests for invalid payload handling and revoked-session behavior.

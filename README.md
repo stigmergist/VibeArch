@@ -160,7 +160,7 @@ Frontend environment contract:
 ## AWS Scaffold
 
 The repository now includes the first AWS serverless scaffold:
-- `infra/aws/template.yaml`: AWS SAM template for S3, DynamoDB, HTTP API, WebSocket API, and Lambda wiring.
+- `infra/aws/template.yaml`: AWS SAM template for S3, DynamoDB, HTTP API, WebSocket API, Lambda wiring, retained Lambda log groups, a CloudWatch dashboard, and baseline CloudWatch alarms.
 - `backend/`: the single Rust backend crate now contains the shared AWS handlers, Lambda binaries, a local DynamoDB bootstrap utility, and a small local websocket gateway that emulates the API Gateway websocket surface for development.
 
 Current implementation status:
@@ -172,6 +172,7 @@ Current implementation status:
 Build prerequisite:
 - `backend/Makefile` expects `cargo-lambda` to be installed for Linux `bootstrap` builds.
 - `make aws-deployed-smoke` uses the `aws` CLI when stack outputs are resolved automatically from `AWS_STACK_NAME` and `AWS_REGION`.
+- the deployed stack now also outputs `CloudWatchDashboardName` for the provisioned service dashboard.
 
 Local/AWS backend shape:
 - Local auth API: `sam local start-api`

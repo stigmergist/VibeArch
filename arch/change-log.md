@@ -1,5 +1,17 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 32)
+
+- Synced the wiki after adding CloudWatch monitoring resources to the AWS SAM stack.
+- Updated deployability, risks, drift, and next-step posture to reflect that retained Lambda log groups, a service dashboard, and baseline alarms now exist, while alarm routing, threshold tuning, CI/CD, and repeated deployed smoke enforcement remain open.
+- Scope reviewed: `infra/aws/template.yaml`, `infra/aws/README.md`, `README.md`, `arch/README.md`, `arch/system-overview.md`, `arch/next-steps.md`, `arch/risks.md`, `arch/drift.md`, and `arch/component-details/aws-serverless-platform.md`.
+- Trigger signal: change-volume gate triggered (runtime infrastructure boundary changed in `infra/aws/template.yaml` and 8+ files changed overall).
+- Stable vs changed: application behavior and deployment target remained stable; deployed monitoring maturity improved materially through a first-class CloudWatch dashboard and baseline alarms, while release automation and operational routing remain the top gaps.
+- Re-ranked top 1-3 architecture actions now are:
+	1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+	2. CI/CD + alarm routing + rollback baseline
+	3. CI-enforced regression coverage that includes the deployed serverless flow
+
 ## 2026-04-24 (update 31)
 
 - Synced the wiki after adding structured JSON backend logs and minimum service/SLO telemetry.

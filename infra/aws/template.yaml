@@ -2,6 +2,21 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Simple Chat AWS serverless scaffold
 
+Parameters:
+  LambdaLogRetentionDays:
+    Type: Number
+    Default: 14
+    AllowedValues:
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 120
+      - 180
+      - 365
+    Description: Retention period in days for Lambda log groups.
+
 Globals:
   Function:
     Runtime: provided.al2023
@@ -108,6 +123,12 @@ Resources:
       BuildMethod: makefile
       BinaryName: auth
 
+  AuthFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AuthFunction}
+      RetentionInDays: !Ref LambdaLogRetentionDays
+
   WebSocketApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -121,6 +142,8 @@ Resources:
       ApiId: !Ref WebSocketApi
       StageName: prod
       AutoDeploy: true
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: true
 
   WebSocketConnectFunction:
     Type: AWS::Serverless::Function
@@ -136,6 +159,12 @@ Resources:
       BuildMethod: makefile
       BinaryName: ws_connect
 
+  WebSocketConnectFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${WebSocketConnectFunction}
+      RetentionInDays: !Ref LambdaLogRetentionDays
+
   WebSocketDisconnectFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -148,6 +177,12 @@ Resources:
       BuildMethod: makefile
       BinaryName: ws_disconnect
 
+  WebSocketDisconnectFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${WebSocketDisconnectFunction}
+      RetentionInDays: !Ref LambdaLogRetentionDays
+
   WebSocketMessageFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -159,6 +194,12 @@ Resources:
     Metadata:
       BuildMethod: makefile
       BinaryName: ws_message
+
+  WebSocketMessageFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${WebSocketMessageFunction}
+      RetentionInDays: !Ref LambdaLogRetentionDays
 
   WebSocketConnectIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -229,9 +270,223 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*/$default
 
+  AuthFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm when the auth Lambda reports any errors in a 5 minute window.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref AuthFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  WebSocketConnectFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm when the websocket connect Lambda reports any errors in a 5 minute window.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref WebSocketConnectFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  WebSocketDisconnectFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm when the websocket disconnect Lambda reports any errors in a 5 minute window.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref WebSocketDisconnectFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  WebSocketMessageFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm when the websocket message Lambda reports any errors in a 5 minute window.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref WebSocketMessageFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  SessionsTableThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm when the sessions table throttles any requests in a 5 minute window.
+      Namespace: AWS/DynamoDB
+      MetricName: ThrottledRequests
+      Dimensions:
+        - Name: TableName
+          Value: !Ref SessionsTable
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  ConnectionsTableThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm when the connections table throttles any requests in a 5 minute window.
+      Namespace: AWS/DynamoDB
+      MetricName: ThrottledRequests
+      Dimensions:
+        - Name: TableName
+          Value: !Ref ConnectionsTable
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  ServiceDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub ${AWS::StackName}-simple-chat-service
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Lambda Invocations And Errors",
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [ "AWS/Lambda", "Invocations", "FunctionName", "${AuthFunction}", { "label": "Auth invocations" } ],
+                  [ ".", "Errors", ".", ".", { "label": "Auth errors", "yAxis": "right" } ],
+                  [ "AWS/Lambda", "Invocations", "FunctionName", "${WebSocketConnectFunction}", { "label": "WS connect invocations" } ],
+                  [ ".", "Errors", ".", ".", { "label": "WS connect errors", "yAxis": "right" } ],
+                  [ "AWS/Lambda", "Invocations", "FunctionName", "${WebSocketMessageFunction}", { "label": "WS message invocations" } ],
+                  [ ".", "Errors", ".", ".", { "label": "WS message errors", "yAxis": "right" } ]
+                ]
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Lambda Duration p95",
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "p95",
+                "metrics": [
+                  [ "AWS/Lambda", "Duration", "FunctionName", "${AuthFunction}", { "label": "Auth p95 ms" } ],
+                  [ "AWS/Lambda", "Duration", "FunctionName", "${WebSocketConnectFunction}", { "label": "WS connect p95 ms" } ],
+                  [ "AWS/Lambda", "Duration", "FunctionName", "${WebSocketDisconnectFunction}", { "label": "WS disconnect p95 ms" } ],
+                  [ "AWS/Lambda", "Duration", "FunctionName", "${WebSocketMessageFunction}", { "label": "WS message p95 ms" } ]
+                ]
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "DynamoDB Throttled Requests",
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "metrics": [
+                  [ "AWS/DynamoDB", "ThrottledRequests", "TableName", "${UsersTable}", { "label": "Users throttled" } ],
+                  [ "AWS/DynamoDB", "ThrottledRequests", "TableName", "${SessionsTable}", { "label": "Sessions throttled" } ],
+                  [ "AWS/DynamoDB", "ThrottledRequests", "TableName", "${ConnectionsTable}", { "label": "Connections throttled" } ]
+                ]
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "DynamoDB Consumed Capacity",
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [ "AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${SessionsTable}", { "label": "Sessions read capacity" } ],
+                  [ "AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", "${SessionsTable}", { "label": "Sessions write capacity" } ],
+                  [ "AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${ConnectionsTable}", { "label": "Connections read capacity" } ],
+                  [ "AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", "${ConnectionsTable}", { "label": "Connections write capacity" } ]
+                ]
+              }
+            },
+            {
+              "type": "log",
+              "x": 0,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Auth Outcomes From Structured Logs",
+                "region": "${AWS::Region}",
+                "view": "table",
+                "query": "SOURCE '/aws/lambda/${AuthFunction}' | fields @timestamp, route, outcome, duration_ms, username | filter event = 'auth_request' | stats count() as requests, avg(duration_ms) as avg_duration_ms by route, outcome | sort requests desc"
+              }
+            },
+            {
+              "type": "log",
+              "x": 12,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "WebSocket Outcomes From Structured Logs",
+                "region": "${AWS::Region}",
+                "view": "table",
+                "query": "SOURCE '/aws/lambda/${WebSocketConnectFunction}', '/aws/lambda/${WebSocketDisconnectFunction}', '/aws/lambda/${WebSocketMessageFunction}' | fields @timestamp, event, outcome, connection_id, username, text_len | filter event like /websocket_/ or event = 'broadcast' | stats count() as events by event, outcome | sort events desc"
+              }
+            }
+          ]
+        }
+
 Outputs:
   HttpApiUrl:
     Value: !GetAtt HttpApi.ApiEndpoint
 
   WebSocketApiUrl:
     Value: !Sub wss://${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${WebSocketStage}
+
+  CloudWatchDashboardName:
+    Value: !Sub ${AWS::StackName}-simple-chat-service
