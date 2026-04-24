@@ -152,11 +152,25 @@ For architecture weakness analysis tasks:
    - Usability
    - Accessibility
    For “Vulnerability including library dependency checking,” confirm that all dependencies are checked for known vulnerabilities using appropriate tools for each language or package manager. Document any unresolved high/critical advisories in arch/risks.md.
+   - Include a lightweight threat model assessment:
+      - Identify trust boundaries and where untrusted input enters the system.
+      - Flag missing input validation, authentication gaps, or insecure defaults at boundary crossings.
+      - State the assumed attacker model (for example: external/unauthenticated user, authenticated user, or insider threat).
 6. Include deployability assessment:
    - Whether customers can rely on the current deployment path today.
    - Where the system can be deployed now (for example local-only, containerized, cloud VM, managed platform).
    - What is missing for production deployment (configuration, secrets handling, observability, CI/CD, rollback, capacity planning).
    - Recommended target deployment model and smallest path to production readiness.
+7. Flag common architectural anti-patterns where evidence exists in the code (for example, be not limited to):
+   - Distributed monolith: components deployed separately but tightly coupled at runtime (shared data stores, synchronous cross-boundary calls on every request).
+   - Chatty interfaces: high-frequency fine-grained calls across a boundary that could be batched or colocated.
+   - Shared mutable state across component boundaries without explicit ownership documented.
+   - God components: single modules that accumulate unrelated responsibilities over time, making change risky and testing hard.
+   - Document identified anti-patterns in .arch/risks.md with evidence and a proposed resolution path.
+8. Identify and record good patterns worth preserving:
+   - Note architectural decisions that are working well and should be replicated or protected (for example: clear boundary separation, consistent error handling shape, explicit ownership of state).
+   - Record these as positive evidence in the relevant `.arch/component-details/<component-slug>.md` file, not in risks.md.
+   - When a proposed change would erode a good pattern, call it out explicitly before proceeding.
 
 ## Business Value Framing Rules
 
@@ -195,6 +209,8 @@ Before completing any architecture sync, verify:
 - [ ] Change-volume gate has been evaluated; if triggered, `arch/change-log.md` records the trigger signal, review scope, and reprioritized actions
 - [ ] `arch/README.md`, `arch/system-overview.md`, `arch/risks.md`, and `arch/drift.md` include `## Scan First (Traffic Light)` sections with 🔴/🟡/🟢 bullets in the required order
 - [ ] `arch/next-steps.md` includes `## Priority Legend` and traffic-light priority section headers
+- [ ] Any newly identified anti-patterns or architecture debt items have been added to .arch/risks.md with evidence and a proposed resolution path.
+- [ ] Observed good patterns are noted in the relevant component detail files and have not been silently removed by recent changes.
 
 ## Non-Functional Architecture Requirements
 
