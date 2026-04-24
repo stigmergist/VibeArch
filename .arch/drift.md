@@ -1,5 +1,8 @@
 # Drift
 
+This file tracks gaps between the intended architecture and what the code currently does. The most important thing to know right now is that local-to-AWS auth and session policy drift (session TTL, origin enforcement) is the top unresolved mismatch — it means behaviour validated locally may not match what runs in AWS.
+
+
 ## Customer And Business Consequence Snapshot
 
 - Reliability perception risk: transient disconnect recovery improved, and recent conversation now restores on join, but release confidence still depends on proving that reconnect, history replay, and session-revocation behavior stay correct outside local validation.

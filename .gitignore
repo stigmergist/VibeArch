@@ -39,5 +39,4 @@ target/
 !.vscode/tasks.json
 
 # Obsidian workspace metadata
-arch/.obsidian/
-.arch/.obsidian/workspace.json
+.arch/.obsidian/

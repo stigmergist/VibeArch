@@ -210,6 +210,10 @@ Before completing any architecture sync, verify:
 - [ ] `arch/README.md`, `arch/system-overview.md`, `arch/risks.md`, and `arch/drift.md` include `## Scan First (Traffic Light)` sections with 🔴/🟡/🟢 bullets in the required order
 - [ ] `arch/next-steps.md` includes `## Priority Legend` and traffic-light priority section headers
 - [ ] Any newly identified anti-patterns or architecture debt items have been added to .arch/risks.md with evidence and a proposed resolution path.
+- [ ] Any newly identified anti-patterns or architecture debt items have been added to .arch/risks.md with evidence and a proposed resolution path.
+- [ ] All .arch files open with a plain-English summary paragraph before the first heading.
+- [ ] Tables are used for scorecards, risk registers, ADR logs, and component relationship summaries rather than nested bullet lists.
+- [ ] No .arch file uses bullet nesting deeper than two levels; deeper structures have been converted to tables or sub-sections.
 - [ ] Observed good patterns are noted in the relevant component detail files and have not been silently removed by recent changes.
 
 ## Non-Functional Architecture Requirements
@@ -276,3 +280,16 @@ When unsure:
 - Treat .arch as the architecture source of truth for implementation guidance.
 - Treat code outside .arch as the source of truth for what currently exists.
 - Continuously reconcile differences through documented decisions, risks, and drift notes.
+- Continuously reconcile differences through documented decisions, risks, and drift notes.
+- Use consistent heading hierarchy in all .arch files: `##` for major sections, `###` for subsections, `####` sparingly for detail. Never skip levels.
+- Use tables for any comparison, scorecard, or multi-attribute list (risks, NFRs, ADRs, component relationships). Prefer tables over nested bullet lists when three or more attributes per item exist.
+- Use bullet lists for single-attribute enumerations only. Avoid deeply nested bullets (max two levels); flatten or convert to a table if nesting exceeds two levels.
+- Open every .arch file with a one-paragraph plain-English summary before any headings or tables. The summary should answer: what is this file, and what is the most important thing to know right now?
+- In component detail files, use a consistent section order: Summary → Responsibilities → Dependencies → Risks → Open Questions → Recommended Actions → Navigation Links.
+- Separate sections with a blank line above and below each `##` heading for readability in raw markdown.
+- In tables, keep cell content short (one clause max). Move long explanations to a referenced section or bullet below the table.
+- Prefer active voice and present tense in all arch content ("The frontend calls..." not "The frontend is responsible for calling...").
+- For risk and weakness findings, use a consistent mini-structure rather than dense prose paragraphs. Each finding should have: a short bold title, then `**What:**`, `**Why it matters:**`, `**Evidence:**`, `**Resolution:**` on separate lines. This makes findings scannable at a glance.
+- Never combine more than two distinct facts in a single sentence in .arch content. Split compound observations into separate lines or table rows.
+- Threat model sections must use a two-part structure: first a plain-English summary paragraph (one or two sentences stating overall exposure and top concern), then a table with columns: Trust Boundary | What crosses it | Current gap | Severity. Avoid prose-only threat descriptions.
+- For each threat boundary gap, state the customer impact in plain language before the technical description (for example: "Users could be impersonated" before "bearer token not validated on websocket route").

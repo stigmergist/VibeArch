@@ -1,5 +1,8 @@
 # System Overview
 
+This file describes what the system is trying to do, where its boundaries sit, and how it runs in practice. The most important thing to know right now is that the AWS-parity local path (SAM + DynamoDB Local) is the validated development path, but the system has not yet been consistently exercised against a deployed AWS stack, and that gap is the top production-readiness blocker.
+
+
 ## Goals
 
 - Provide a simple real-time chat experience for multiple browser clients.

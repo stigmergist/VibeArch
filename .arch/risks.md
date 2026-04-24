@@ -1,5 +1,8 @@
 # Architecture Risks
 
+This file records known architecture risks, NFR hotspots, anti-patterns, and supply chain vulnerability findings. The most important thing to know right now is that deployed AWS validation, CI/CD, and local-to-AWS auth policy parity (R-013, R-008, R-017) are the top customer-trust risks and should be resolved before a production rollout.
+
+
 ## Customer And Business Risk Summary
 
 - Highest customer trust risk: shipping the AWS path without repeated deployed validation, CI gates, and consistent auth/session/origin policy can create visible reliability or security surprises that hurt confidence early.
@@ -40,17 +43,31 @@
 
 ## Observed Anti-Patterns
 
-- Emerging god components: `backend/src/aws_lambda.rs` (1,213 lines) mixes auth HTTP handling, DynamoDB access, websocket orchestration, history paging, and validation, while `frontend/src/App.jsx` (414 lines) mixes auth UX, reconnect logic, history pagination, and message rendering. Resolution path: extract shared service modules, policy helpers, and thinner UI/runtime slices before adding more protocol features.
+**Emerging god components**
+- **What:** `backend/src/aws_lambda.rs` (1,213 lines) and `frontend/src/App.jsx` (414 lines) each accumulate multiple unrelated responsibilities.
+- **Why it matters:** Large mixed-responsibility modules make change risky — a bug fix in one concern can break another, and tests are harder to isolate.
+- **Evidence:** `aws_lambda.rs` mixes auth HTTP, DynamoDB, websocket orchestration, history paging, and validation. `App.jsx` mixes auth UX, reconnect logic, pagination, and message rendering.
+- **Resolution:** Extract shared service modules, policy helpers, and thinner UI/runtime slices before adding more protocol features. See R-018.
 
----
+## Lightweight Threat Model
+
+The system's main exposure is at the websocket boundary: on the AWS path, authentication is checked at connect time using a bearer token, but the application-level origin enforcement applied locally is not enforced in the AWS Lambda handler. An attacker with a valid token could connect from any origin. All other boundaries are adequately controlled for the current stage.
+
+| Trust Boundary | What crosses it | Current gap | Severity |
+|---|---|---|---|
+| Browser → Auth API (HTTP) | Registration and login JSON bodies | Input validated; origin enforced locally | 🟢 Low |
+| Browser → WebSocket (connect) | Bearer token in query string | AWS path: app-level origin not enforced | 🔴 High |
+| WebSocket → message frame | Chat message JSON | Validated; rate limiting absent | 🟡 Medium |
+| Lambda → DynamoDB | Session, message, connection reads/writes | No gap identified | 🟢 Low |
+| Deployment config | Env vars and SAM template | Session TTL hardcoded on AWS path | 🟡 Medium |
 
 ## Supply Chain Vulnerability Evidence (2026-04-24)
 
-- Revalidated during this sync with `cargo audit` and `npm audit`; current findings remain unchanged for Rust and Node.js.
+- Revalidated during this sync with `cargo audit` and `npm audit`; current findings remain unchanged.
 - **Rust (backend):**
-	- 3 moderate vulnerabilities in `rustls-webpki` (transitive via AWS SDK): reachable panic, name constraint issues ([RUSTSEC-2026-0104](https://rustsec.org/advisories/RUSTSEC-2026-0104), [RUSTSEC-2026-0098], [RUSTSEC-2026-0099]).
-	- Solution: Upgrade `rustls-webpki` to >=0.103.13 (requires upstream AWS SDK update).
+  - 3 moderate vulnerabilities in `rustls-webpki` (transitive via AWS SDK): reachable panic, name constraint issues ([RUSTSEC-2026-0104](https://rustsec.org/advisories/RUSTSEC-2026-0104), [RUSTSEC-2026-0098], [RUSTSEC-2026-0099]).
+  - Solution: Upgrade `rustls-webpki` to >=0.103.13 (requires upstream AWS SDK update).
 - **Node.js (frontend):**
-	- 5 moderate vulnerabilities in `vite`, `esbuild`, `vitest`, and related packages.
-	- Solution: Upgrade `vite` to 8.0.10+ and `vitest` to 4.1.5+ (major version bumps required).
-- **Python:** The repo still has no project-managed Python dependency manifest; a fresh `pip_audit` rerun was not possible in the current shell because the tool is not installed for the available interpreters.
+  - 5 moderate vulnerabilities in `vite`, `esbuild`, `vitest`, and related packages.
+  - Solution: Upgrade `vite` to 8.0.10+ and `vitest` to 4.1.5+ (major version bumps required).
+- **Python:** No project-managed Python dependency manifest exists. A `pip_audit` run was not possible in the current environment.

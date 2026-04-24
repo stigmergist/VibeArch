@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "component-details/aws-serverless-platform.md",
+                "file": "drift.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "aws-serverless-platform"
+              "title": "drift"
             }
           }
         ]
@@ -185,20 +185,20 @@
   },
   "active": "c4d489979765bdba",
   "lastOpenFiles": [
-    "component-details/chat-api.md",
-    "component-details/frontend-styling.md",
+    "decisions.md",
     "components.md",
+    "next-steps.md",
     "risks.md",
     "system-overview.md",
-    "next-steps.md",
-    "decisions.md",
+    "component-details/aws-serverless-platform.md",
+    "component-details/chat-api.md",
+    "component-details/frontend-styling.md",
     "change-log.md",
     "README.md",
     "drift.md",
     "data-flow.md",
     "component-details/frontend-ui.md",
     "component-details/payload-validator.md",
-    "component-details/aws-serverless-platform.md",
     "component-details/connection-manager.md",
     "component-details/build-runtime-tooling.md",
     "component-details",

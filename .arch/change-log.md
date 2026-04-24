@@ -1,5 +1,15 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 37)
+
+- Applied new formatting standards from updated `.github/copilot-instructions.md` across all `.arch` files.
+- Added opening plain-English summary paragraphs to `system-overview.md`, `risks.md`, `drift.md`, and `next-steps.md`.
+- Reformatted the god-component anti-pattern finding in `risks.md` from dense prose into structured **What / Why it matters / Evidence / Resolution** blocks.
+- Added a two-part Lightweight Threat Model section to `risks.md`: plain-English summary paragraph followed by a trust-boundary table with columns Trust Boundary | What crosses it | Current gap | Severity.
+- No code-zone changes; this was a documentation formatting pass only.
+- Gate: change-volume gate not triggered.
+
+
 ## 2026-04-24 (update 36)
 
 - Ran a full architecture resync after the workspace-instruction changes added explicit requirements for threat modeling, anti-pattern tracking, preserved good patterns, and stricter architecture-sync validation.

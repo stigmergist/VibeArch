@@ -1,5 +1,8 @@
 # Next Steps
 
+This file is the top-level index for recommended architecture work, ordered by priority. The most important action right now is validating the deployed AWS path end-to-end before treating the system as production-ready.
+
+
 This file is the top-level index for recommended architecture work. Component-specific detail lives in [component-details/frontend-ui.md](component-details/frontend-ui.md), [component-details/frontend-styling.md](component-details/frontend-styling.md), [component-details/chat-api.md](component-details/chat-api.md), [component-details/payload-validator.md](component-details/payload-validator.md), [component-details/connection-manager.md](component-details/connection-manager.md), [component-details/build-runtime-tooling.md](component-details/build-runtime-tooling.md), and [component-details/aws-serverless-platform.md](component-details/aws-serverless-platform.md).
 
 ## Customer And Business Outcomes First
