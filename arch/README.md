@@ -24,7 +24,7 @@ This wiki is the architecture source of truth for the repository.
 - Backend: shared Rust crate in `backend/` that contains the Lambda handlers, the local websocket gateway shim, and the shared validation/auth logic reused across local and AWS paths
 - AWS scaffold: `infra/aws/template.yaml` plus `backend/src/aws_lambda.rs` and the Lambda binaries in `backend/src/bin/`
 - Auth/session: `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, fixed-lifetime bearer sessions, and token-authenticated WebSocket chat on `/ws/chat`
-- Persistence: the supported backend path persists users, sessions, and connection IDs in DynamoDB or DynamoDB Local
+- Persistence: the supported backend path persists users, sessions, chat history, and connection IDs in DynamoDB or DynamoDB Local
 - Supported local backend path: DynamoDB Local + `sam local start-api` + `cargo run --bin local_gateway`
 - Additional local convenience path: `docker compose up --build` runs frontend + direct Axum backend for one-command bring-up
 - Production target direction: AWS serverless with static frontend hosting plus Lambda-backed auth and chat integrations
@@ -32,14 +32,14 @@ This wiki is the architecture source of truth for the repository.
 ## NFR And Deployability Snapshot
 
 - NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/security/manageability/portability/cost/robustness/reliability/fault tolerance/observability/testability/maintainability/privacy and data protection/usability/accessibility.
-- Deployability today: strong for the supported AWS-local development path and materially closer to the target AWS runtime because local auth and websocket flows now run through the shared Lambda-oriented handlers. A deployed AWS smoke harness now exists, the backend now emits structured JSON logs plus minimum health/SLO telemetry, and the SAM stack now provisions a CloudWatch dashboard plus baseline alarms, but production still lacks CI/CD, alarm routing, secrets handling, and repeated deployed validation in release operations.
+- Deployability today: stronger for real chat continuity because the supported AWS-local development path now persists recent conversation history in the same DynamoDB-backed handler flow used for AWS. The stack also has baseline CloudWatch monitoring, but production still lacks CI/CD, alarm routing, secrets handling, retention policy decisions for stored messages, and repeated deployed validation in release operations.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: deployed AWS validation, CI/CD enforcement, and alarm routing gaps are the main launch-confidence risks.
-- 🟡 Watch closely: reliability and delivery-speed still depend on release enforcement for deployed smoke checks, tuned thresholds, and deeper end-to-end coverage.
-- 🟢 Stable base: input validation, modular boundaries, server-owned sender identity, and baseline service monitoring are in a good state.
+- 🔴 Act now: deployed AWS validation, CI/CD enforcement, and message-retention/alarm-routing gaps are the main launch-confidence risks.
+- 🟡 Watch closely: reliability and delivery-speed still depend on release enforcement for deployed smoke checks, tuned thresholds, and history-pagination regression coverage.
+- 🟢 Stable base: input validation, modular boundaries, server-owned sender identity, persisted recent conversation history, and baseline service monitoring are in a good state.
 
 ## Recommended Action Index
 
@@ -55,6 +55,7 @@ This wiki is the architecture source of truth for the repository.
 
 ## Completed Recently
 
+- 2026-04-24: Added persisted chat history plus lazy backward pagination so recent conversation is restored on join and older pages load only when the user scrolls upward.
 - 2026-04-24: Added CloudWatch dashboard and baseline alarms for the AWS SAM stack, plus explicit Lambda log-group retention for deployed monitoring.
 - 2026-04-24: Added structured JSON tracing across local and Lambda backend entrypoints, plus minimum service/SLO telemetry in the local health response.
 - 2026-04-24: Added bounded frontend reconnect behavior plus frontend and backend regression tests for reconnect, protocol validation, and revoked-session handling.

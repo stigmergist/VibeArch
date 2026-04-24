@@ -142,9 +142,9 @@ The repo now treats the AWS-targeted handler code as the only supported backend 
 
 For an AWS pay-per-use deployment, the backend needs to move to AWS-native serverless primitives:
 - S3 + CloudFront for the frontend
-- API Gateway HTTP API + Lambda for `POST /auth/register`, `POST /auth/login`, and `POST /auth/logout`
+- API Gateway HTTP API + Lambda for `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, and `GET /auth/messages`
 - API Gateway WebSocket API + Lambda for `$connect`, `$disconnect`, and chat message routes
-- DynamoDB for users, sessions, and active WebSocket connection records
+- DynamoDB for users, sessions, persisted chat messages, and active WebSocket connection records
 
 The implementation target and migration notes live in `infra/aws/README.md`.
 
@@ -188,8 +188,9 @@ Local/AWS backend shape:
 - Client sends `{ text }` payloads only.
 - Backend authenticates the socket from the session token and stamps `sender` from the authenticated identity.
 - Frontend can sign out by calling `POST /auth/logout` with `Authorization: Bearer <token>`.
+- Frontend loads the newest saved messages on join, then requests older pages only when the user scrolls back toward the top of the message list.
 - Backend rejects any client payload that tries to send its own `sender` field.
-- Backend broadcasts each valid message to all connected clients.
+- Backend persists each valid chat message, then broadcasts it to all connected clients.
 - Join/leave events are sent as system messages.
 - AWS Lambda deployment and local SAM development both use the shared DynamoDB-backed handler module.
 

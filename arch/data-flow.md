@@ -25,6 +25,7 @@ sequenceDiagram
    F->>G: Send JSON { text }
    G->>L: Invoke $default handler
    L->>L: Validate via parse_and_validate()
+   L->>D: Persist accepted message
    L->>D: Scan active connections
    L-->>G: Post outbound envelopes
    G-->>F: send(payload)
@@ -36,6 +37,21 @@ sequenceDiagram
 2. Frontend uses `VITE_AUTH_BASE_URL` when present; otherwise it derives the auth base URL from `VITE_CHAT_WS_URL` by switching the scheme from `ws` to `http` and replacing the trailing `/ws/chat` with `/auth`.
 3. Frontend calls `POST /auth/register` or `POST /auth/login`.
 4. Backend validates credentials, creates a fixed-expiry session token, persists it in the active runtime store, and returns `{ token, username, displayName, expiresAt }`.
+
+## Flow: Load Recent History
+
+1. After sign-in succeeds, frontend calls `GET /auth/messages?limit=25` with `Authorization: Bearer <token>`.
+2. Backend validates the bearer token against the current session store.
+3. Supported AWS-local and AWS paths query the persisted `Messages` table in DynamoDB or DynamoDB Local; the direct Axum helper path reads the recent in-memory message list.
+4. Backend returns the newest saved messages in chronological order plus `hasMore` and `nextBefore` cursor metadata.
+5. Frontend renders the returned messages before live websocket traffic continues to append new ones.
+
+## Flow: Load Older History While Scrolling Backward
+
+1. User scrolls near the top of the message list.
+2. Frontend calls `GET /auth/messages?limit=25&before=<oldestLoadedMessageId>`.
+3. Backend returns the next older page in chronological order.
+4. Frontend prepends the page, preserves scroll position, and repeats only while `hasMore` remains true.
 
 ## Flow: Logout
 
@@ -59,7 +75,8 @@ sequenceDiagram
 3. Gateway forwards the text frame to the shared `$default` handler, which passes it to `parse_and_validate()`.
 4. If validation fails, backend rejects the frame; the exact error-envelope behavior differs between the local Axum helper path and the Lambda-oriented websocket path.
 5. If `text` is blank after strip, frame is silently discarded; loop continues.
-6. Backend broadcasts normalized message event to all connected clients, stamping sender from the authenticated session:
+6. Backend persists the normalized message event, then broadcasts it to all connected clients, stamping sender from the authenticated session:
+   - `id: stable message id`
    - `type: "message"`
    - `sender: string`
    - `text: string`
@@ -105,5 +122,5 @@ sequenceDiagram
 
 - Frontend <-> Backend boundary: HTTP JSON auth endpoints plus WebSocket JSON chat protocol.
 - Frontend runtime config boundary: `VITE_CHAT_WS_URL` must resolve to the websocket gateway or deployed WebSocket API; `VITE_AUTH_BASE_URL` may explicitly point at the matching auth API.
-- Backend runtime config boundary: `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings define auth, persistence, and local routing behavior.
+- Backend runtime config boundary: `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings define auth, persistence, history pagination, and local routing behavior.
 - External systems: DynamoDB Local for supported local runs and DynamoDB/API Gateway in AWS.

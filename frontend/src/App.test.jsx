@@ -60,6 +60,24 @@ describe('App', () => {
           }),
         };
       }
+      if (String(url).includes('/auth/messages')) {
+        return {
+          ok: true,
+          json: async () => ({
+            messages: [
+              {
+                id: 'message-1',
+                type: 'message',
+                sender: 'Bob',
+                text: 'Earlier hello',
+                sentAt: '2030-01-01T00:00:00Z',
+              },
+            ],
+            hasMore: false,
+            nextBefore: null,
+          }),
+        };
+      }
       if (String(url).endsWith('/auth/logout')) {
         return {
           ok: true,
@@ -94,6 +112,7 @@ describe('App', () => {
       firstSocket.open();
     });
     await waitFor(() => expect(screen.getByText('Signed in as Alice.')).toBeInTheDocument());
+    expect(screen.getByText('Earlier hello')).toBeInTheDocument();
 
     await act(async () => {
       firstSocket.drop();
@@ -130,5 +149,84 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(socket.sent).toEqual([JSON.stringify({ text: 'hello there' })]);
+  });
+
+  it('loads older messages only when scrolling near the top', async () => {
+    global.fetch = vi.fn(async (url, options = {}) => {
+      if (String(url).endsWith('/auth/login')) {
+        return {
+          ok: true,
+          json: async () => ({
+            token: 'session-token',
+            username: 'alice',
+            displayName: 'Alice',
+            expiresAt: '2030-01-01T00:00:00Z',
+          }),
+        };
+      }
+      if (String(url).includes('/auth/messages?limit=25&before=message-2')) {
+        return {
+          ok: true,
+          json: async () => ({
+            messages: [
+              {
+                id: 'message-1',
+                type: 'message',
+                sender: 'Bob',
+                text: 'Oldest message',
+                sentAt: '2030-01-01T00:00:00Z',
+              },
+            ],
+            hasMore: false,
+            nextBefore: null,
+          }),
+        };
+      }
+      if (String(url).includes('/auth/messages?limit=25')) {
+        return {
+          ok: true,
+          json: async () => ({
+            messages: [
+              {
+                id: 'message-2',
+                type: 'message',
+                sender: 'Carol',
+                text: 'Newest saved message',
+                sentAt: '2030-01-01T00:01:00Z',
+              },
+            ],
+            hasMore: true,
+            nextBefore: 'message-2',
+          }),
+        };
+      }
+      if (String(url).endsWith('/auth/logout')) {
+        return {
+          ok: true,
+          json: async () => ({}),
+        };
+      }
+      throw new Error(`Unexpected fetch call: ${url}`);
+    });
+
+    const socket = await signIn();
+    await act(async () => {
+      socket.open();
+    });
+
+    const list = screen.getByRole('list');
+    Object.defineProperty(list, 'scrollHeight', { value: 500, configurable: true });
+    Object.defineProperty(list, 'clientHeight', { value: 200, configurable: true });
+
+    await waitFor(() => expect(screen.getByText('Newest saved message')).toBeInTheDocument());
+
+    list.scrollTop = 150;
+    fireEvent.scroll(list);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+
+    list.scrollTop = 10;
+    fireEvent.scroll(list);
+
+    await waitFor(() => expect(screen.getByText('Oldest message')).toBeInTheDocument());
   });
 });

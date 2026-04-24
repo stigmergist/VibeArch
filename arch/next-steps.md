@@ -7,6 +7,7 @@ This file is the top-level index for recommended architecture work. Component-sp
 - Protect user trust at launch: prove the deployed AWS auth and chat path works end to end before calling production readiness.
 - Reduce support burden and delivery risk: add broader automated coverage so regressions are caught before users see them.
 - Improve recovery speed and operational confidence: add CI/CD gates, alarm routing, and rollback procedure on top of the new telemetry baseline.
+- Keep durable history affordable and trustworthy: define retention, privacy, and capacity guardrails now that messages are stored and paged back into the UI.
 
 ## Priority Legend
 
@@ -22,6 +23,8 @@ This file is the top-level index for recommended architecture work. Component-sp
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 3. Improve release confidence and incident recovery by adding CI/CD, alarm routing, and rollback procedure for the serverless target now that dashboards and baseline alarms exist.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Frontend UI](component-details/frontend-ui.md)
+4. Define message-retention, privacy, and cost guardrails for persisted chat history before treating the new conversation replay path as production-ready.
+   Related components: [Chat API](component-details/chat-api.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 
 ## 🟡 Medium Priority
 
@@ -34,6 +37,8 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 ## 🟢 Completed Recently
 
+- 2026-04-24: Added persisted chat history plus lazy backward pagination so recent conversation restores on join and older pages load only on backward scroll.
+   Related components: [Chat API](component-details/chat-api.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 - 2026-04-24: Added explicit Lambda log retention plus a CloudWatch dashboard and baseline alarms to the AWS SAM stack so deployed auth/chat telemetry has an immediate operator view.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 - 2026-04-24: Added structured JSON logs for auth, websocket, and broadcast paths, plus minimum service/SLO telemetry in the local health response.

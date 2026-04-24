@@ -21,6 +21,9 @@ use crate::{
 
 const PASSWORD_HASH_BYTES: usize = 32;
 const PASSWORD_ITERATIONS: u32 = 100_000;
+const DEFAULT_HISTORY_PAGE_SIZE: usize = 25;
+const MAX_HISTORY_PAGE_SIZE: usize = 100;
+const DEFAULT_ROOM_ID: &str = "main";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -75,6 +78,8 @@ pub struct SessionResponse {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatEnvelope {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
     #[serde(rename = "type")]
     pub event_type: String,
     pub sender: Option<String>,
@@ -95,6 +100,15 @@ pub struct DynamoLayout {
     pub users_table: String,
     pub sessions_table: String,
     pub connections_table: String,
+    pub messages_table: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageHistoryResponse {
+    pub messages: Vec<ChatEnvelope>,
+    pub has_more: bool,
+    pub next_before: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -115,6 +129,23 @@ struct StoredUserRecord {
     password_salt_b64: String,
     password_hash_b64: String,
     created_at: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredMessageRecord {
+    room_id: String,
+    message_id: String,
+    event_type: String,
+    sender: Option<String>,
+    text: String,
+    sent_at: String,
+}
+
+struct MessageHistoryPage {
+    messages: Vec<ChatEnvelope>,
+    has_more: bool,
+    next_before: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -149,6 +180,13 @@ impl DynamoLayout {
                 "ConnectionsTable",
                 "simple-chat-connections-local",
                 "simple-chat-connections",
+                local_mode,
+            ),
+            messages_table: resolve_table_name(
+                "MESSAGES_TABLE",
+                "MessagesTable",
+                "simple-chat-messages-local",
+                "simple-chat-messages",
                 local_mode,
             ),
         };
@@ -328,6 +366,81 @@ impl AwsClients {
         Ok(connections)
     }
 
+    async fn put_message(&self, message: &ChatEnvelope) -> Result<(), Error> {
+        let Some(message_id) = &message.id else {
+            return Ok(());
+        };
+
+        let record = StoredMessageRecord {
+            room_id: DEFAULT_ROOM_ID.to_string(),
+            message_id: message_id.clone(),
+            event_type: message.event_type.clone(),
+            sender: message.sender.clone(),
+            text: message.text.clone(),
+            sent_at: message.sent_at.clone(),
+        };
+
+        self.dynamodb
+            .put_item()
+            .table_name(&self.layout.messages_table)
+            .set_item(Some(serde_dynamo::to_item(record).map_err(boxed)?))
+            .send()
+            .await
+            .map_err(boxed)?;
+        Ok(())
+    }
+
+    async fn list_messages(
+        &self,
+        before: Option<&str>,
+        limit: usize,
+    ) -> Result<MessageHistoryPage, Error> {
+        let page_size = limit.clamp(1, MAX_HISTORY_PAGE_SIZE);
+        let fetch_limit = i32::try_from(page_size + 1).map_err(boxed)?;
+        let mut request = self
+            .dynamodb
+            .query()
+            .table_name(&self.layout.messages_table)
+            .key_condition_expression("#room = :room")
+            .expression_attribute_names("#room", "roomId")
+            .expression_attribute_values(":room", AttributeValue::S(DEFAULT_ROOM_ID.to_string()))
+            .scan_index_forward(false)
+            .limit(fetch_limit);
+
+        if let Some(cursor) = before {
+            request = request
+                .key_condition_expression("#room = :room AND #message < :before")
+                .expression_attribute_names("#message", "messageId")
+                .expression_attribute_values(":before", AttributeValue::S(cursor.to_string()));
+        }
+
+        let output = request.send().await.map_err(boxed)?;
+        let mut records = Vec::new();
+        for item in output.items.unwrap_or_default() {
+            let record: StoredMessageRecord = serde_dynamo::from_item(item).map_err(boxed)?;
+            records.push(record);
+        }
+
+        let has_more = records.len() > page_size;
+        if has_more {
+            records.truncate(page_size);
+        }
+        records.reverse();
+
+        let messages = records.into_iter().map(ChatEnvelope::from).collect::<Vec<_>>();
+        let next_before = if has_more {
+            messages.first().and_then(|message| message.id.clone())
+        } else {
+            None
+        };
+
+        Ok(MessageHistoryPage {
+            messages,
+            has_more,
+            next_before,
+        })
+    }
+
     async fn broadcast_message(&self, message: &ChatEnvelope) -> Result<(), Error> {
         let telemetry = telemetry::shared_telemetry();
         let Some(management) = &self.management else {
@@ -380,6 +493,7 @@ pub async fn handle_auth_http(request: Request) -> Result<Response<Body>, Error>
     let method = request.method().as_str();
 
     match (method, path) {
+        ("GET", "/auth/messages") => list_messages(request).await,
         ("POST", "/auth/register") => register(request).await,
         ("POST", "/auth/login") => login(request).await,
         ("POST", "/auth/logout") => logout(request).await,
@@ -482,8 +596,10 @@ pub async fn handle_ws_send_message(
             let text_len = text.chars().count();
             telemetry.record_message_accepted();
             tracing::info!(event = "websocket_message", outcome = "accepted", connection_id = %connection_id, username = %connection.username, text_len, "websocket message accepted");
+            let message = ChatEnvelope::message(connection.display_name, text);
+            clients.put_message(&message).await?;
             clients
-                .broadcast_message(&ChatEnvelope::message(connection.display_name, text))
+                .broadcast_message(&message)
                 .await?;
             ws_response(200, "Message accepted.")
         }
@@ -741,6 +857,44 @@ async fn logout(request: Request) -> Result<Response<Body>, Error> {
     empty_response(StatusCode::NO_CONTENT)
 }
 
+async fn list_messages(request: Request) -> Result<Response<Body>, Error> {
+    let clients = AwsClients::from_http_env().await?;
+    let authorization = request
+        .headers()
+        .get("authorization")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let token = match extract_bearer_token(authorization) {
+        Ok(token) => token,
+        Err(detail) => {
+            telemetry::shared_telemetry().record_auth(false);
+            return json_response(StatusCode::UNAUTHORIZED, json!({ "detail": detail }));
+        }
+    };
+
+    if clients.get_session(&token).await?.is_none() {
+        telemetry::shared_telemetry().record_auth(false);
+        return json_response(
+            StatusCode::UNAUTHORIZED,
+            json!({ "detail": "Authentication required or session expired." }),
+        );
+    }
+
+    let query = parse_history_query(request.uri().query());
+    let page = clients
+        .list_messages(query.before.as_deref(), query.limit)
+        .await?;
+
+    json_response(
+        StatusCode::OK,
+        serde_json::to_value(MessageHistoryResponse {
+            messages: page.messages,
+            has_more: page.has_more,
+            next_before: page.next_before,
+        })?,
+    )
+}
+
 fn extract_bearer_token(value: &str) -> Result<String, String> {
     let (scheme, token) = value
         .split_once(' ')
@@ -757,6 +911,33 @@ fn parse_json_body<T: for<'de> Deserialize<'de>>(body: &Body) -> Result<T, Strin
         Body::Binary(bytes) => serde_json::from_slice(bytes).map_err(|_| "Request body must be valid JSON.".to_string()),
         Body::Empty => Err("Request body is required.".to_string()),
     }
+}
+
+struct ParsedHistoryQuery {
+    before: Option<String>,
+    limit: usize,
+}
+
+fn parse_history_query(raw: Option<&str>) -> ParsedHistoryQuery {
+    let mut before = None;
+    let mut limit = DEFAULT_HISTORY_PAGE_SIZE;
+
+    for pair in raw.unwrap_or_default().split('&') {
+        let Some((key, value)) = pair.split_once('=') else {
+            continue;
+        };
+        match key {
+            "before" if !value.is_empty() => before = Some(value.to_string()),
+            "limit" => {
+                if let Ok(parsed) = value.parse::<usize>() {
+                    limit = parsed.clamp(1, MAX_HISTORY_PAGE_SIZE);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    ParsedHistoryQuery { before, limit }
 }
 
 fn decode_fixed<const N: usize>(encoded: &str) -> Result<[u8; N], String> {
@@ -830,6 +1011,7 @@ impl TryFrom<SessionRecord> for StoredSessionRecord {
 impl ChatEnvelope {
     fn system(text: String) -> Self {
         Self {
+            id: None,
             event_type: "system".to_string(),
             sender: None,
             text,
@@ -839,12 +1021,32 @@ impl ChatEnvelope {
 
     fn message(sender: String, text: String) -> Self {
         Self {
+            id: Some(generate_message_id()),
             event_type: "message".to_string(),
             sender: Some(sender),
             text,
             sent_at: Utc::now().to_rfc3339(),
         }
     }
+}
+
+impl From<StoredMessageRecord> for ChatEnvelope {
+    fn from(value: StoredMessageRecord) -> Self {
+        Self {
+            id: Some(value.message_id),
+            event_type: value.event_type,
+            sender: value.sender,
+            text: value.text,
+            sent_at: value.sent_at,
+        }
+    }
+}
+
+fn generate_message_id() -> String {
+    let timestamp = Utc::now().timestamp_micros();
+    let mut random = [0_u8; 6];
+    OsRng.fill_bytes(&mut random);
+    format!("{timestamp:020}-{}", URL_SAFE_NO_PAD.encode(random))
 }
 
 fn build_dynamodb_client(shared_config: &aws_config::SdkConfig) -> DynamoDbClient {

@@ -2,15 +2,15 @@
 
 ## Customer And Business Consequence Snapshot
 
-- Reliability perception risk: transient disconnect recovery improved, but release confidence still depends on proving that reconnect and session-revocation behavior stay correct outside local validation.
+- Reliability perception risk: transient disconnect recovery improved, and recent conversation now restores on join, but release confidence still depends on proving that reconnect, history replay, and session-revocation behavior stay correct outside local validation.
 - Release confidence risk: production readiness claims can still outpace evidence until deployed AWS validation, CI checks, and routed alarm actions are complete.
 - Support and onboarding risk: the convenience local runtime and the AWS-parity local runtime now coexist, so their intended uses must stay clearly documented to avoid incorrect validation assumptions.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: deployed AWS validation and alarm-routing drift still separate intended production readiness from current evidence.
+- 🔴 Act now: deployed AWS validation, retention-policy, and alarm-routing drift still separate intended production readiness from current evidence.
 - 🟡 Watch closely: message contract evolution, deployment automation, and full accessibility verification remain partially resolved and user-impacting.
-- 🟢 Stable base: sender ownership, payload validation, safe cleanup behavior, and baseline monitoring are aligned with intended architecture.
+- 🟢 Stable base: sender ownership, payload validation, safe cleanup behavior, persisted recent history, and baseline monitoring are aligned with intended architecture.
 
 ## Quality Status Snapshot
 
@@ -42,7 +42,7 @@
   - Status: 🟢 fully resolved.
 
 - Intended: clients should recover gracefully from transient socket loss or backend restarts.
-  - Observed (partially resolved 2026-04-24): `frontend/src/App.jsx` now retries socket connection up to three times with explicit reconnect status feedback before clearing session state, and `frontend/src/App.test.jsx` covers the retry path.
+  - Observed (partially resolved 2026-04-24): `frontend/src/App.jsx` now retries socket connection up to three times with explicit reconnect status feedback, restores recent persisted messages on join, and fetches older pages only during backward scroll; `frontend/src/App.test.jsx` covers reconnect plus backward-pagination behavior.
   - Remaining gap: restart/disconnect recovery is still not validated against the deployed AWS path, and the UI still drops the session after retry exhaustion instead of preserving longer continuity.
   - Status: 🟡 partially resolved.
 
@@ -69,6 +69,12 @@
   - Observed (partially resolved 2026-04-24): backend entrypoints now emit structured JSON logs for auth, websocket, and broadcast events, the local `GET /health` route exposes minimum service counters, success-rate indicators, and SLO target thresholds, and `infra/aws/template.yaml` now provisions retained Lambda log groups, a CloudWatch dashboard, and baseline alarms.
   - Remaining gap: alarm actions, threshold tuning, and response runbooks still do not exist.
   - Impact: production visibility is materially better, but incident notification and response would still rely too much on manual monitoring.
+  - Status: 🟡 partially resolved.
+
+- Intended: conversation continuity should survive a new join without dumping the full chat log every time.
+  - Observed (partially resolved 2026-04-24): the supported SAM/AWS handler path now persists chat messages and exposes `GET /auth/messages` with cursor-based backward pagination, while `frontend/src/App.jsx` loads the newest page on join and requests older pages only when the user scrolls near the top.
+  - Remaining gap: deployed load, retention policy, and privacy expectations for stored message history are not yet defined.
+  - Impact: user continuity is materially better, but production cost and data-handling risk remain underspecified.
   - Status: 🟡 partially resolved.
 
 - Intended: the chat experience should remain usable and accessible when messages arrive, validation errors occur, or connectivity changes.

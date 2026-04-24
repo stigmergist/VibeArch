@@ -5,6 +5,8 @@ const authBaseUrl =
   import.meta.env.VITE_AUTH_BASE_URL || socketUrl.replace(/^ws/i, 'http').replace(/\/ws\/chat$/, '/auth');
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 1_000;
+const HISTORY_PAGE_SIZE = 25;
+const HISTORY_SCROLL_THRESHOLD_PX = 80;
 
 function formatTime(iso) {
   const date = new Date(iso);
@@ -12,6 +14,44 @@ function formatTime(iso) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(date);
+}
+
+function historyUrl(before) {
+  const params = new URLSearchParams({ limit: String(HISTORY_PAGE_SIZE) });
+  if (before) {
+    params.set('before', before);
+  }
+  return `${authBaseUrl}/messages?${params.toString()}`;
+}
+
+function messageKey(message) {
+  return message.id || `${message.type}:${message.sentAt}:${message.sender || ''}:${message.text}`;
+}
+
+function mergeMessages(current, incoming, prepend = false) {
+  const ordered = prepend ? [...incoming, ...current] : [...current, ...incoming];
+  const seen = new Set();
+  return ordered.filter((message) => {
+    const key = messageKey(message);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+async function fetchMessageHistory(token, before) {
+  const response = await fetch(historyUrl(before), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.detail || 'Unable to load recent messages.');
+  }
+  return payload;
 }
 
 export default function App() {
@@ -26,12 +66,51 @@ export default function App() {
   const [statusMessage, setStatusMessage] = useState('Sign in to join the chat.');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [historyCursor, setHistoryCursor] = useState(null);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const socketRef = useRef(null);
   const listRef = useRef(null);
+  const shouldStickToBottomRef = useRef(true);
+  const pendingPrependRestoreRef = useRef(null);
+
+  const loadOlderMessages = async () => {
+    if (!session || !historyCursor || !hasOlderMessages || isLoadingOlderMessages) {
+      return;
+    }
+
+    const list = listRef.current;
+    if (list) {
+      pendingPrependRestoreRef.current = {
+        scrollHeight: list.scrollHeight,
+        scrollTop: list.scrollTop,
+      };
+    }
+
+    setIsLoadingOlderMessages(true);
+    try {
+      const page = await fetchMessageHistory(session.token, historyCursor);
+      setMessages((current) => mergeMessages(current, page.messages, true));
+      setHistoryCursor(page.nextBefore || null);
+      setHasOlderMessages(Boolean(page.hasMore));
+    } catch (error) {
+      pendingPrependRestoreRef.current = null;
+      setStatusMessage(
+        error instanceof Error ? error.message : 'Unable to load older messages right now.'
+      );
+    } finally {
+      setIsLoadingOlderMessages(false);
+    }
+  };
 
   useEffect(() => {
     if (!session) {
       setReconnectAttempt(0);
+      setHistoryCursor(null);
+      setHasOlderMessages(false);
+      setIsLoadingOlderMessages(false);
+      shouldStickToBottomRef.current = true;
+      pendingPrependRestoreRef.current = null;
       return undefined;
     }
 
@@ -71,7 +150,7 @@ export default function App() {
 
     socket.onmessage = (event) => {
       const payload = JSON.parse(event.data);
-      setMessages((current) => [...current, payload]);
+      setMessages((current) => mergeMessages(current, [payload]));
     };
 
     return () => {
@@ -87,7 +166,17 @@ export default function App() {
     if (!listRef.current) {
       return;
     }
-    listRef.current.scrollTop = listRef.current.scrollHeight;
+
+    if (pendingPrependRestoreRef.current) {
+      const { scrollHeight, scrollTop } = pendingPrependRestoreRef.current;
+      listRef.current.scrollTop = scrollTop + (listRef.current.scrollHeight - scrollHeight);
+      pendingPrependRestoreRef.current = null;
+      return;
+    }
+
+    if (shouldStickToBottomRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const statusLabel = useMemo(() => {
@@ -130,11 +219,30 @@ export default function App() {
         throw new Error(payload.detail || 'Authentication failed.');
       }
 
+      setStatusMessage('Loading recent messages...');
+      let page = {
+        messages: [],
+        hasMore: false,
+        nextBefore: null,
+      };
+      try {
+        page = await fetchMessageHistory(payload.token);
+      } catch (error) {
+        setStatusMessage(
+          error instanceof Error
+            ? `${payload.displayName} signed in, but recent messages could not be loaded.`
+            : 'Signed in, but recent messages could not be loaded.'
+        );
+      }
+
       setReconnectAttempt(0);
+      shouldStickToBottomRef.current = true;
       setSession(payload);
       setDisplayName(payload.displayName);
       setPassword('');
-      setMessages([]);
+      setMessages(page.messages);
+      setHistoryCursor(page.nextBefore || null);
+      setHasOlderMessages(Boolean(page.hasMore));
     } catch (error) {
       setSession(null);
       setStatusMessage(error instanceof Error ? error.message : 'Authentication failed.');
@@ -161,6 +269,8 @@ export default function App() {
       setConnected(false);
       setSession(null);
       setMessages([]);
+      setHistoryCursor(null);
+      setHasOlderMessages(false);
       setDraft('');
       setPassword('');
       setReconnectAttempt(0);
@@ -183,6 +293,20 @@ export default function App() {
     );
 
     setDraft('');
+  };
+
+  const handleMessageListScroll = () => {
+    if (!listRef.current) {
+      return;
+    }
+
+    const list = listRef.current;
+    shouldStickToBottomRef.current =
+      list.scrollHeight - list.scrollTop - list.clientHeight < HISTORY_SCROLL_THRESHOLD_PX;
+
+    if (list.scrollTop <= HISTORY_SCROLL_THRESHOLD_PX) {
+      loadOlderMessages();
+    }
   };
 
   return (
@@ -253,10 +377,11 @@ export default function App() {
 
         <p className="eyebrow" aria-live="polite">{statusMessage}</p>
 
-        <ul className="messages" ref={listRef} aria-live="polite">
+        <ul className="messages" ref={listRef} aria-live="polite" onScroll={handleMessageListScroll}>
+          {isLoadingOlderMessages && <li className="empty">Loading older messages...</li>}
           {messages.length === 0 && <li className="empty">No messages yet. Say hello.</li>}
           {messages.map((message, index) => (
-            <li key={`${message.sentAt}-${index}`} className={message.type === 'system' ? 'system' : message.type === 'error' ? 'error-msg' : ''}>
+            <li key={message.id || `${message.sentAt}-${index}`} className={message.type === 'system' ? 'system' : message.type === 'error' ? 'error-msg' : ''}>
               {message.type === 'system' || message.type === 'error' ? (
                 <p>{message.text}</p>
               ) : (

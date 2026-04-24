@@ -46,9 +46,24 @@ pub const MAX_SENDER_CHARS: usize = 48;
 pub const MAX_USERNAME_CHARS: usize = 24;
 pub const MIN_PASSWORD_CHARS: usize = 8;
 pub const DEFAULT_SESSION_TTL_SECONDS: i64 = 3_600;
-pub const DEFAULT_ALLOWED_ORIGINS: [&str; 2] = ["http://localhost:5173", "http://127.0.0.1:5173"];
+pub const DEFAULT_ALLOWED_ORIGINS: [&str; 12] = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "http://localhost:5176",
+    "http://127.0.0.1:5176",
+    "http://localhost:5177",
+    "http://127.0.0.1:5177",
+    "http://localhost:5178",
+    "http://127.0.0.1:5178",
+];
 const PASSWORD_HASH_BYTES: usize = 32;
 const PASSWORD_ITERATIONS: u32 = 100_000;
+const DEFAULT_HISTORY_PAGE_SIZE: usize = 25;
+const MAX_HISTORY_PAGE_SIZE: usize = 100;
 
 #[derive(Clone, Debug)]
 pub struct Settings {
@@ -103,6 +118,7 @@ pub struct AppState {
     settings: Arc<Settings>,
     users: Arc<RwLock<UserStore>>,
     sessions: Arc<RwLock<SessionStore>>,
+    messages: Arc<RwLock<MessageStore>>,
     connections: Arc<RwLock<HashMap<u64, UnboundedSender<String>>>>,
     next_connection_id: Arc<AtomicU64>,
     telemetry: Arc<telemetry::ServiceTelemetry>,
@@ -114,6 +130,7 @@ impl AppState {
             settings: Arc::new(settings.clone()),
             users: Arc::new(RwLock::new(UserStore::default())),
             sessions: Arc::new(RwLock::new(SessionStore::new(settings.session_ttl_seconds))),
+            messages: Arc::new(RwLock::new(MessageStore::default())),
             connections: Arc::new(RwLock::new(HashMap::new())),
             next_connection_id: Arc::new(AtomicU64::new(1)),
             telemetry: telemetry::shared_telemetry(),
@@ -164,6 +181,14 @@ impl AppState {
     async fn remove_connection(&self, connection_id: u64) {
         self.connections.write().await.remove(&connection_id);
         self.telemetry.record_websocket_disconnect();
+    }
+
+    async fn store_message(&self, message: ChatEvent) {
+        self.messages.write().await.push(message);
+    }
+
+    async fn list_messages(&self, before: Option<&str>, limit: usize) -> MessageHistoryPage {
+        self.messages.read().await.list(before, limit)
     }
 
     fn is_allowed_origin(&self, origin: Option<&str>) -> bool {
@@ -233,6 +258,41 @@ impl UserStore {
 struct SessionStore {
     sessions: HashMap<String, SessionIdentity>,
     session_ttl_seconds: i64,
+}
+
+#[derive(Default)]
+struct MessageStore {
+    messages: Vec<ChatEvent>,
+}
+
+impl MessageStore {
+    fn push(&mut self, message: ChatEvent) {
+        self.messages.push(message);
+    }
+
+    fn list(&self, before: Option<&str>, limit: usize) -> MessageHistoryPage {
+        let page_size = limit.clamp(1, MAX_HISTORY_PAGE_SIZE);
+        let boundary = before.and_then(|cursor| {
+            self.messages
+                .iter()
+                .position(|message| message.id.as_deref() == Some(cursor))
+        });
+        let upper_bound = boundary.unwrap_or(self.messages.len());
+        let start = upper_bound.saturating_sub(page_size);
+        let items = self.messages[start..upper_bound].to_vec();
+        let has_more = start > 0;
+        let next_before = if has_more {
+            items.first().and_then(|message| message.id.clone())
+        } else {
+            None
+        };
+
+        MessageHistoryPage {
+            messages: items,
+            has_more,
+            next_before,
+        }
+    }
 }
 
 impl SessionStore {
@@ -307,6 +367,12 @@ struct ChatQuery {
     token: Option<String>,
 }
 
+#[derive(Deserialize)]
+struct HistoryQuery {
+    before: Option<String>,
+    limit: Option<usize>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SessionResponse {
@@ -314,6 +380,14 @@ struct SessionResponse {
     username: String,
     display_name: String,
     expires_at: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MessageHistoryResponse {
+    messages: Vec<ChatEvent>,
+    has_more: bool,
+    next_before: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -327,15 +401,23 @@ struct ErrorDetail<'a> {
     detail: &'a str,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ChatEvent {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    id: Option<String>,
     #[serde(rename = "type")]
     event_type: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     sender: Option<String>,
     text: String,
     sent_at: String,
+}
+
+struct MessageHistoryPage {
+    messages: Vec<ChatEvent>,
+    has_more: bool,
+    next_before: Option<String>,
 }
 
 struct AppError {
@@ -393,6 +475,7 @@ pub fn build_app(settings: Settings) -> Router {
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
         .route("/auth/logout", post(logout))
+        .route("/auth/messages", get(list_messages))
         .route("/ws/chat", get(chat_socket))
         .with_state(state)
         .layer(cors)
@@ -495,6 +578,36 @@ async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Result<Sta
         "auth request completed"
     );
     Ok(StatusCode::NO_CONTENT)
+}
+
+async fn list_messages(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<HistoryQuery>,
+) -> Result<Json<MessageHistoryResponse>, AppError> {
+    ensure_allowed_http_origin(&state, &headers)?;
+    let token = extract_bearer_token(&headers)?;
+
+    let identity = {
+        let mut sessions = state.sessions.write().await;
+        sessions.get(&token)
+    };
+    if identity.is_none() {
+        state.telemetry.record_auth(false);
+        return Err(AppError::unauthorized(
+            "Authentication required or session expired.",
+        ));
+    }
+
+    let page = state
+        .list_messages(query.before.as_deref(), query.limit.unwrap_or(DEFAULT_HISTORY_PAGE_SIZE))
+        .await;
+
+    Ok(Json(MessageHistoryResponse {
+        messages: page.messages,
+        has_more: page.has_more,
+        next_before: page.next_before,
+    }))
 }
 
 async fn chat_socket(
@@ -608,11 +721,10 @@ async fn websocket_session(
                             text_len,
                             "websocket message accepted"
                         );
+                        let message = ChatEvent::message(identity.display_name.clone(), text);
+                        state.store_message(message.clone()).await;
                         state
-                            .broadcast_json(&ChatEvent::message(
-                                identity.display_name.clone(),
-                                text,
-                            ))
+                            .broadcast_json(&message)
                             .await;
                     }
                     Ok(None) => {}
@@ -806,6 +918,7 @@ impl SessionResponse {
 impl ChatEvent {
     fn system(text: String) -> Self {
         Self {
+            id: None,
             event_type: "system",
             sender: None,
             text,
@@ -815,6 +928,7 @@ impl ChatEvent {
 
     fn message(sender: String, text: String) -> Self {
         Self {
+            id: Some(generate_message_id()),
             event_type: "message",
             sender: Some(sender),
             text,
@@ -824,10 +938,18 @@ impl ChatEvent {
 
     fn error(text: &'static str) -> Self {
         Self {
+            id: None,
             event_type: "error",
             sender: None,
             text: text.to_string(),
             sent_at: Utc::now().to_rfc3339(),
         }
     }
+}
+
+fn generate_message_id() -> String {
+    let timestamp = Utc::now().timestamp_micros();
+    let mut random = [0_u8; 6];
+    OsRng.fill_bytes(&mut random);
+    format!("{timestamp:020}-{}", URL_SAFE_NO_PAD.encode(random))
 }

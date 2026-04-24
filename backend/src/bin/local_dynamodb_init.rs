@@ -30,6 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     ensure_table(&client, "simple-chat-users-local", "username").await?;
     ensure_table(&client, "simple-chat-sessions-local", "token").await?;
     ensure_table(&client, "simple-chat-connections-local", "connectionId").await?;
+    ensure_table_with_sort_key(&client, "simple-chat-messages-local", "roomId", "messageId").await?;
     enable_ttl(&client, "simple-chat-sessions-local", "expiresAtEpoch").await?;
 
     println!("local DynamoDB tables are ready at {endpoint}");
@@ -61,6 +62,59 @@ async fn ensure_table(
             KeySchemaElement::builder()
                 .attribute_name(attribute_name)
                 .key_type(KeyType::Hash)
+                .build()?,
+        )
+        .send()
+        .await;
+
+    if let Err(error) = create_result {
+        if !error.to_string().contains("ResourceInUseException") {
+            return Err(error.into());
+        }
+    }
+
+    println!("created table: {table_name}");
+    Ok(())
+}
+
+async fn ensure_table_with_sort_key(
+    client: &Client,
+    table_name: &str,
+    hash_key: &str,
+    sort_key: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let exists = client.describe_table().table_name(table_name).send().await.is_ok();
+    if exists {
+        println!("table already exists: {table_name}");
+        return Ok(());
+    }
+
+    let create_result = client
+        .create_table()
+        .table_name(table_name)
+        .billing_mode(BillingMode::PayPerRequest)
+        .attribute_definitions(
+            AttributeDefinition::builder()
+                .attribute_name(hash_key)
+                .attribute_type(ScalarAttributeType::S)
+                .build()?,
+        )
+        .attribute_definitions(
+            AttributeDefinition::builder()
+                .attribute_name(sort_key)
+                .attribute_type(ScalarAttributeType::S)
+                .build()?,
+        )
+        .key_schema(
+            KeySchemaElement::builder()
+                .attribute_name(hash_key)
+                .key_type(KeyType::Hash)
+                .build()?,
+        )
+        .key_schema(
+            KeySchemaElement::builder()
+                .attribute_name(sort_key)
+                .key_type(KeyType::Range)
                 .build()?,
         )
         .send()

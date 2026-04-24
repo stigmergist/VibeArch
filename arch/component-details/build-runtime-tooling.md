@@ -43,6 +43,7 @@ Primary implementation: `compose.aws-local.yaml`, `docker-compose.yml`, `fronten
 - `backend/Makefile` now includes `require-local-dynamodb` and `require-sam-build` so `make local-aws-dev`, `make sam-local-api`, and `make sam-local-ws-gateway` fail with actionable setup messages when local prerequisites are missing.
 - `backend/Makefile` now also includes `make aws-deployed-smoke`, which can resolve `HttpApiUrl` and `WebSocketApiUrl` from CloudFormation outputs or accept explicit smoke endpoints.
 - `docker-compose.yml` plus `backend/src/main.rs` provide a one-command convenience runtime for frontend + direct Axum backend bring-up without changing the AWS-parity validation path.
+- `infra/aws/template.yaml` and `backend/src/lib.rs` now allow the common local Vite fallback ports (`5173` through `5178`) so port shifts do not immediately break SAM-local auth CORS or the direct Axum helper origin policy.
 - `frontend/package.json`, `frontend/vite.config.js`, and `frontend/src/test/setup.js` now define a Vitest + jsdom + Testing Library frontend regression harness.
 - `backend/src/telemetry.rs` now centralizes JSON log initialization and minimum service/SLO counters shared by local and Lambda entrypoints.
 

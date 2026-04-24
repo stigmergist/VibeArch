@@ -285,6 +285,66 @@ async fn revoked_session_errors_active_socket_on_next_message() {
     }
 }
 
+#[tokio::test]
+async fn message_history_returns_recent_page_and_older_messages() {
+    let server = spawn_server(30).await;
+    let payload = register_user(&server).await;
+    let token = payload.get("token").unwrap().as_str().unwrap();
+
+    let mut request = server
+        .ws_url(&format!("/ws/chat?token={token}"))
+        .into_client_request()
+        .unwrap();
+    request
+        .headers_mut()
+        .insert("Origin", HeaderValue::from_static(ALLOWED_ORIGIN));
+    let (mut socket, _) = connect_async(request).await.unwrap();
+
+    let _ = socket.next().await;
+
+    socket
+        .send(Message::Text(r#"{"text":"first saved message"}"#.into()))
+        .await
+        .unwrap();
+    let first = next_json_message(&mut socket).await;
+
+    socket
+        .send(Message::Text(r#"{"text":"second saved message"}"#.into()))
+        .await
+        .unwrap();
+    let second = next_json_message(&mut socket).await;
+
+    let client = Client::new();
+    let recent = client
+        .get(server.http_url("/auth/messages?limit=1"))
+        .header("Origin", ALLOWED_ORIGIN)
+        .header("Authorization", format!("Bearer {token}"))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(recent.status(), reqwest::StatusCode::OK);
+    let recent_payload: Value = recent.json().await.unwrap();
+    assert_eq!(recent_payload["messages"][0]["text"], "second saved message");
+    assert_eq!(recent_payload["messages"][0]["id"], second["id"]);
+    assert_eq!(recent_payload["hasMore"], true);
+
+    let before = recent_payload["nextBefore"].as_str().unwrap();
+    let older = client
+        .get(server.http_url(&format!("/auth/messages?limit=1&before={before}")))
+        .header("Origin", ALLOWED_ORIGIN)
+        .header("Authorization", format!("Bearer {token}"))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(older.status(), reqwest::StatusCode::OK);
+    let older_payload: Value = older.json().await.unwrap();
+    assert_eq!(older_payload["messages"][0]["text"], "first saved message");
+    assert_eq!(older_payload["messages"][0]["id"], first["id"]);
+    assert_eq!(older_payload["hasMore"], false);
+}
+
 async fn next_json_message(
     socket: &mut tokio_tungstenite::WebSocketStream<
         tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,

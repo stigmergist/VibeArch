@@ -1,5 +1,17 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 33)
+
+- Synced the wiki after adding persisted chat history and lazy backward pagination.
+- Updated the system/runtime docs to reflect a new `Messages` persistence boundary, `GET /auth/messages` history replay, and the frontend behavior that loads recent history on join then fetches older pages only during upward scroll.
+- Scope reviewed: `backend/src/lib.rs`, `backend/src/aws_lambda.rs`, `backend/src/bin/local_dynamodb_init.rs`, `backend/tests/auth_lifecycle.rs`, `frontend/src/App.jsx`, `frontend/src/App.test.jsx`, `infra/aws/template.yaml`, `infra/aws/env.local.json`, `README.md`, `infra/aws/README.md`, `arch/README.md`, `arch/system-overview.md`, `arch/data-flow.md`, `arch/next-steps.md`, `arch/risks.md`, `arch/drift.md`, `arch/component-details/chat-api.md`, `arch/component-details/frontend-ui.md`, and `arch/component-details/aws-serverless-platform.md`.
+- Trigger signal: change-volume gate triggered (runtime persistence boundary changed, API contract expanded, and 10+ files changed overall).
+- Stable vs changed: the single-room auth and websocket model remained stable; the data model expanded to include durable message history and cursor-based replay, which improved user continuity but added retention, privacy, and cost considerations.
+- Re-ranked top 1-3 architecture actions now are:
+	1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+	2. CI/CD + alarm routing + rollback baseline
+	3. Message-retention, privacy, and capacity guardrails for the new persisted history path
+
 ## 2026-04-24 (update 32)
 
 - Synced the wiki after adding CloudWatch monitoring resources to the AWS SAM stack.

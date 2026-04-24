@@ -16,9 +16,9 @@ Primary implementation: `frontend/src/App.jsx`
 - Collect registration/login credentials and call the backend auth endpoints.
 - Allow the user to revoke the current session via logout.
 - Open and maintain the browser WebSocket connection.
-- Render connection status, message list, and message composer.
+- Render connection status, a paged message list, and message composer.
 - Send user-authored messages to the backend as JSON.
-- Display server-side validation errors and disable sending while disconnected.
+- Display server-side validation errors, restore recent history on join, and lazily fetch older pages during backward scroll.
 
 ## Dependencies
 
@@ -34,6 +34,7 @@ Primary implementation: `frontend/src/App.jsx`
 - Reconnect behavior now uses bounded retries with visible status feedback, but the UI still clears session state after retry exhaustion.
 - Session state is not persisted across refresh or explicit logout.
 - Session expiry is enforced by the backend, but the UI has no pre-expiry warning or refresh flow.
+- History now restores recent messages on join and older pages on backward scroll, but there is still no unread marker or delivery-state UX.
 - Live-region announcements now exist for status and message updates, but keyboard/focus accessibility has not been verified.
 
 ## Recommended Actions
@@ -42,13 +43,14 @@ Primary implementation: `frontend/src/App.jsx`
 2. Add integration tests for auth flow, connection lifecycle, and error rendering in CI.
 3. Decide whether session state should survive refresh and whether expiry should surface a clearer UX than forced re-login.
 4. Add keyboard-focused accessibility checks and an accessibility audit.
-5. Keep the `VITE_CHAT_WS_URL` and `VITE_AUTH_BASE_URL` contract aligned with deployment documentation and build tooling.
+5. Decide whether the restored-history UX needs unread separators, scroll anchors, or stronger continuity cues.
 
 ## Recent Evidence
 
 - `frontend/src/App.jsx` now retries unexpected socket closes up to three times and surfaces reconnect progress to the user.
 - `frontend/src/App.jsx` now marks status and message regions as live announcements for assistive technologies.
-- `frontend/src/App.test.jsx` now covers reconnect behavior and outbound payload shape with Vitest and Testing Library.
+- `frontend/src/App.jsx` now restores the newest saved messages on join and fetches older pages only when the user scrolls near the top of the message list.
+- `frontend/src/App.test.jsx` now covers reconnect behavior, outbound payload shape, and backward history pagination with Vitest and Testing Library.
 
 ## Open Questions
 

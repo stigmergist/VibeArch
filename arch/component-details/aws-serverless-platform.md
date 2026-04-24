@@ -18,7 +18,7 @@ Primary implementation target: `infra/aws/README.md`, `infra/aws/template.yaml`,
 - Map frontend static hosting to S3 + CloudFront.
 - Map auth behavior to Lambda-backed HTTP APIs.
 - Map chat behavior to API Gateway WebSocket routes plus Lambda handlers.
-- Move user/session/connection state to DynamoDB-backed persistence.
+- Move user/session/message/connection state to DynamoDB-backed persistence.
 
 ## Dependencies
 
@@ -33,21 +33,24 @@ Primary implementation target: `infra/aws/README.md`, `infra/aws/template.yaml`,
 ## Risks And Gaps
 
 - API Gateway WebSocket pricing still includes connection-minute cost, so “pay only when used” is approximate rather than zero-idle.
-- The shared Lambda path now persists auth/session/connection state, performs API Gateway fan-out, and runs locally through SAM plus the websocket gateway shim. A deployed smoke harness now exists, the backend now emits structured logs plus minimum telemetry, and the SAM stack now provisions a dashboard plus baseline alarms, but CI/CD, secrets management, alarm routing, and repeated deployed AWS validation are still incomplete.
+- The shared Lambda path now persists auth/session/message/connection state, performs API Gateway fan-out, and runs locally through SAM plus the websocket gateway shim. A deployed smoke harness now exists, the backend now emits structured logs plus minimum telemetry, and the SAM stack now provisions a dashboard plus baseline alarms, but CI/CD, secrets management, retention policy, alarm routing, and repeated deployed AWS validation are still incomplete.
 
 ## Recommended Actions
 
 1. Run the deployed AWS smoke path regularly in release validation so the implemented harness becomes an operational guardrail rather than a one-off test.
 2. Finalize production env vars and public domain topology for `VITE_CHAT_WS_URL` and `VITE_AUTH_BASE_URL`.
-3. Attach the new CloudWatch alarms to incident routing, tune thresholds from real traffic, and fold the dashboard into rollout/rollback procedures.
-4. Add CI/CD and secrets handling for the AWS deployment path.
+3. Define retention, privacy, and capacity expectations for the persisted `Messages` table.
+4. Attach the new CloudWatch alarms to incident routing, tune thresholds from real traffic, and fold the dashboard into rollout/rollback procedures.
+5. Add CI/CD and secrets handling for the AWS deployment path.
 
 ## Recent Evidence
 
 - `backend/tests/aws_local_smoke.rs` now exercises register plus websocket message round-trip against the local SAM auth API and local websocket gateway.
 - `backend/tests/aws_local_smoke.rs` now also includes a deployed AWS smoke case driven by `SMOKE_AUTH_BASE_URL` and `SMOKE_CHAT_WS_URL`, and `backend/Makefile` can resolve those from CloudFormation outputs via `make aws-deployed-smoke`.
 - `backend/tests/auth_lifecycle.rs` now adds websocket lifecycle coverage for invalid payloads and revoked sessions, which strengthens confidence in the shared handler behavior before release-time AWS checks.
+- `backend/tests/auth_lifecycle.rs` now also covers persisted message history replay and cursor-based paging in the direct helper path.
 - `backend/src/bin/auth.rs`, `backend/src/bin/ws_connect.rs`, `backend/src/bin/ws_disconnect.rs`, and `backend/src/bin/ws_message.rs` now use the shared JSON tracing initializer so local and Lambda entrypoints emit the same structured event shape.
+- `infra/aws/template.yaml` now provisions a `Messages` table and `GET /auth/messages` route so recent conversation can be replayed without over-fetching the full log.
 - `infra/aws/template.yaml` now provisions explicit Lambda log-group retention, a `${AWS::StackName}-simple-chat-service` dashboard, and baseline CloudWatch alarms for Lambda errors and DynamoDB throttling.
 - Browser validation succeeded against `http://127.0.0.1:3000/auth/*`, `ws://127.0.0.1:3001/ws/chat`, and the Vite frontend on `http://127.0.0.1:5173`.
 - `backend/src/aws_lambda.rs` now normalizes SAM-local logical table names and local DynamoDB/websocket defaults so the shared handlers run through the same code path locally and in AWS.

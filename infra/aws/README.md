@@ -22,9 +22,11 @@ flowchart LR
    WS --> Message[Lambda $default]
     Auth --> Users[(DynamoDB Users)]
     Auth --> Sessions[(DynamoDB Sessions)]
+   Auth --> Messages[(DynamoDB Messages)]
     Connect --> Sessions
     Connect --> Connections[(DynamoDB Connections)]
     Disconnect --> Connections
+   Message --> Messages
     Message --> Connections
     Message --> Sessions
 ```
@@ -32,8 +34,9 @@ flowchart LR
 ## Required Backend Split
 
 1. Auth Lambda
-   - Handles `POST /auth/register`, `POST /auth/login`, and `POST /auth/logout`.
+   - Handles `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, and `GET /auth/messages`.
    - Stores users and fixed-lifetime sessions in DynamoDB.
+   - Reads recent persisted chat messages with backward pagination.
 
 2. WebSocket Connect Lambda
    - Validates the bearer token from the WebSocket connect request.
@@ -62,6 +65,11 @@ flowchart LR
   - Partition key: `connectionId`
   - Stores username, display name, connected-at timestamp
 
+- `Messages`
+   - Partition key: `roomId`
+   - Sort key: `messageId`
+   - Stores sender, text, event type, and server timestamp for persisted chat history
+
 ## Frontend Changes Needed
 
 - `VITE_CHAT_WS_URL` must point at the API Gateway WebSocket URL in production.
@@ -72,7 +80,8 @@ flowchart LR
 - `template.yaml` now provides the first AWS SAM scaffold for:
    - S3 frontend bucket
    - DynamoDB `Users`, `Sessions`, and `Connections` tables
-   - API Gateway HTTP API routes for `POST /auth/register`, `POST /auth/login`, and `POST /auth/logout`
+   - DynamoDB `Messages` table for persisted chat history
+   - API Gateway HTTP API routes for `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, and `GET /auth/messages`
    - API Gateway WebSocket routes for `$connect`, `$disconnect`, and `$default`
    - explicit Lambda log groups with retention controls
    - a CloudWatch dashboard for Lambda, DynamoDB, and structured-log views
@@ -85,8 +94,10 @@ flowchart LR
    - `register` persists users and sessions in DynamoDB.
    - `login` loads users from DynamoDB and mints new session records.
    - `logout` revokes persisted sessions in DynamoDB.
+   - `messages` returns the newest saved chat messages and pages older history by cursor.
 - `ws_connect`, `ws_disconnect`, and `ws_message` handlers:
    - persist and clean up websocket connection records in DynamoDB
+   - persist accepted chat messages in DynamoDB before websocket fan-out
    - preserve the frontend payload contract by routing `{ "text": ... }` through the `$default` websocket route
    - fan out messages through the API Gateway Management API when a management endpoint is available
 
@@ -187,6 +198,6 @@ Current limitation:
 ## Remaining Work
 
 1. Run the deployed smoke path against a real AWS stack and keep it in the release checklist.
-2. Attach the CloudWatch alarms to SNS or the chosen incident-routing path and tune thresholds from real traffic.
-3. Add CI/CD and release automation for the AWS target.
-4. Update frontend production env vars for deployed AWS endpoints.
+2. Define retention and capacity guardrails for the persisted `Messages` table now that chat history is durable.
+3. Attach the CloudWatch alarms to SNS or the chosen incident-routing path and tune thresholds from real traffic.
+4. Add CI/CD and release automation for the AWS target.

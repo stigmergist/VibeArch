@@ -4,12 +4,12 @@
 
 - Highest customer trust risk: shipping the AWS path without repeated deployed validation, CI gates, and routed alarm actions can create visible reliability failures that hurt confidence early.
 - Highest delivery-speed risk: missing CI/CD and broad integration coverage increases regression risk and slows feature velocity due to manual verification and rework.
-- Highest cost and operations risk: telemetry improved, but missing routed alarm actions and unclear WebSocket cost guardrails can still increase incident recovery time and make unit economics harder to predict.
+- Highest cost and operations risk: telemetry improved, but missing routed alarm actions and undefined message-retention/capacity guardrails can still increase incident recovery time and make unit economics harder to predict.
 
 ## Scan First (Traffic Light)
 
 - 🔴 Act now: R-013 (deployed AWS path not yet validated consistently in release operations) and R-008 (CI/CD still missing) are the most direct customer-trust and incident-recovery risks.
-- 🟡 Watch closely: R-008, R-006, R-009, and R-010 can still amplify regressions and user-visible instability during release cycles because the new coverage, dashboard signals, and reconnect behavior are not yet enforced end to end.
+- 🟡 Watch closely: R-006, R-009, R-010, and the new R-015 can still amplify regressions, support burden, or cost surprises because history replay and monitoring are not yet enforced end to end.
 - 🟢 Stable base: R-001, R-002, R-005, and the monitoring baseline portion of R-009 are mitigated enough to reduce blind spots.
 
 | ID    | Risk                                                                                                                                                                                                                                        | Quality Area                                                           | Severity | Likelihood | Mitigation                                                                                                                      | Owner            |
@@ -28,6 +28,7 @@
 | R-012 | Local Axum user and session state are still in-memory only; the AWS path persists them in DynamoDB, but there is still no refresh/rotation strategy and local restarts still reset dev state                                                | Security, Reliability, Privacy and Data Protection                     | Medium   | Medium     | Decide whether token refresh/rotation is required and whether local/dev parity needs persistent storage                         | Backend owner    |
 | R-013 | The chosen AWS Lambda production target now has a real implementation in the shared crate, and a deployed smoke harness exists, but it has not yet been validated consistently through deployed smoke runs, CI, or production observability | Portability, Deployability, Scalability, Reliability                   | Medium   | Medium     | Run deployed smoke validation as part of release checks, then add CI checks and operational telemetry before production rollout | Platform owner   |
 | R-014 | AWS API Gateway WebSocket pricing adds connection-minute cost, so the pay-per-use expectation can be misunderstood                                                                                                                          | Cost                                                                   | Medium   | Medium     | Model expected concurrent usage and set CloudWatch budgets/alarms before production rollout                                     | Platform owner   |
+| R-015 | Recent conversation history now persists and replays into the UI, but message-retention policy, privacy rules, and read/write capacity guardrails for the `Messages` table are still undefined                                           | Privacy and Data Protection, Cost, Availability, Usability             | Medium   | Medium     | Define retention/privacy policy, validate history query load, and add table capacity/cost monitoring                           | Platform owner   |
 
 ## NFR Hotspots
 
