@@ -5,6 +5,7 @@ This file is the top-level index for recommended architecture work. Component-sp
 ## Customer And Business Outcomes First
 
 - Protect user trust at launch: prove the deployed AWS auth and chat path works end to end before calling production readiness.
+- Avoid security-policy surprises at launch: keep auth, session, and origin behavior consistent between the supported local path and the deployed AWS path.
 - Reduce support burden and delivery risk: add broader automated coverage so regressions are caught before users see them.
 - Improve recovery speed and operational confidence: add CI/CD gates, alarm routing, and rollback procedure on top of the new telemetry baseline.
 - Keep durable history affordable and trustworthy: define retention, privacy, and capacity guardrails now that messages are stored and paged back into the UI.
@@ -19,11 +20,13 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 1. Prevent launch-time trust failures by validating the deployed AWS handler path with smoke tests that mirror the now-working SAM-local flow, including the `$default` websocket route and DynamoDB-backed auth/session/connection behavior.
    Related components: [Chat API](component-details/chat-api.md), [Connection Manager](component-details/connection-manager.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
-2. Reduce customer-facing regressions and support churn by enforcing the growing backend and frontend regression suites in CI and extending them to the deployed serverless release flow.
+2. Prevent production-only auth and policy regressions by enforcing the same origin, session-TTL, and validation rules across the local helper path and the AWS Lambda path.
+   Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
+3. Reduce customer-facing regressions and support churn by enforcing the growing backend and frontend regression suites in CI and extending them to the deployed serverless release flow.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
-3. Improve release confidence and incident recovery by adding CI/CD, alarm routing, and rollback procedure for the serverless target now that dashboards and baseline alarms exist.
+4. Improve release confidence and incident recovery by adding CI/CD, alarm routing, and rollback procedure for the serverless target now that dashboards and baseline alarms exist.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Frontend UI](component-details/frontend-ui.md)
-4. Define message-retention, privacy, and cost guardrails for persisted chat history before treating the new conversation replay path as production-ready.
+5. Define message-retention, privacy, and cost guardrails for persisted chat history before treating the new conversation replay path as production-ready.
    Related components: [Chat API](component-details/chat-api.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 
 ## 🟡 Medium Priority
@@ -34,6 +37,8 @@ This file is the top-level index for recommended architecture work. Component-sp
    Related components: [Frontend UI](component-details/frontend-ui.md), [Frontend Styling](component-details/frontend-styling.md)
 3. Reduce deployment mistakes and onboarding friction by defining backend settings/config conventions to match the now-documented frontend env contract and the future AWS endpoint topology.
    Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Chat API](component-details/chat-api.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
+4. Reduce maintenance drag before the next protocol expansion by extracting shared auth/validation/session helpers from the growing runtime files and by thinning the frontend orchestration component.
+   Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 
 ## 🟢 Completed Recently
 

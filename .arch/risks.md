@@ -2,14 +2,14 @@
 
 ## Customer And Business Risk Summary
 
-- Highest customer trust risk: shipping the AWS path without repeated deployed validation, CI gates, and routed alarm actions can create visible reliability failures that hurt confidence early.
+- Highest customer trust risk: shipping the AWS path without repeated deployed validation, CI gates, and consistent auth/session/origin policy can create visible reliability or security surprises that hurt confidence early.
 - Highest delivery-speed risk: missing CI/CD and broad integration coverage increases regression risk and slows feature velocity due to manual verification and rework.
-- Highest cost and operations risk: telemetry improved, but missing routed alarm actions and undefined message-retention/capacity guardrails can still increase incident recovery time and make unit economics harder to predict.
+- Highest cost and operations risk: telemetry improved, but missing routed alarm actions, undefined message-retention/capacity guardrails, and duplicated runtime-policy logic can still increase incident recovery time and make change safety harder to predict.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: R-013 (deployed AWS path not yet validated consistently in release operations) and R-008 (CI/CD still missing) are the most direct customer-trust and incident-recovery risks.
-- 🟡 Watch closely: R-006, R-009, R-010, and the new R-015 can still amplify regressions, support burden, or cost surprises because history replay and monitoring are not yet enforced end to end.
+- 🔴 Act now: R-013 (deployed AWS path not yet validated consistently), R-017 (local and AWS auth/origin policy drift), and R-008 (CI/CD still missing) are the most direct customer-trust and incident-recovery risks.
+- 🟡 Watch closely: R-006, R-009, R-010, R-015, and R-018 can still amplify regressions, support burden, or cost surprises because history replay, monitoring, and runtime policy logic are not yet enforced end to end.
 - 🟢 Stable base: R-001, R-002, R-005, and the monitoring baseline portion of R-009 are mitigated enough to reduce blind spots.
 
 | ID    | Risk                                                                                                                                                                                                                                        | Quality Area                                                           | Severity | Likelihood | Mitigation                                                                                                                      | Owner            |
@@ -30,20 +30,27 @@
 | R-014 | AWS API Gateway WebSocket pricing adds connection-minute cost, so the pay-per-use expectation can be misunderstood                                                                                                                          | Cost                                                                   | Medium   | Medium     | Model expected concurrent usage and set CloudWatch budgets/alarms before production rollout                                     | Platform owner   |
 | R-015 | Recent conversation history now persists and replays into the UI, but message-retention policy, privacy rules, and read/write capacity guardrails for the `Messages` table are still undefined                                           | Privacy and Data Protection, Cost, Availability, Usability             | Medium   | Medium     | Define retention/privacy policy, validate history query load, and add table capacity/cost monitoring                           | Platform owner   |
 | R-016 | Supply chain vulnerabilities detected in backend (Rust) and frontend (Node.js) dependencies. Rust: 3 moderate advisories in `rustls-webpki` (transitive via AWS SDK). Node.js: 5 moderate advisories in `vite`, `esbuild`, `vitest`. | Security, Reliability, Manageability                                   | Medium   | Medium     | Schedule dependency upgrades for backend and frontend; monitor for upstream fixes in AWS SDK and major package updates.         | Platform owner   |
+| R-017 | Local and AWS auth/session policy is not yet consistent: `backend/src/lib.rs` enforces `ALLOWED_ORIGINS` and configurable `SESSION_TTL_SECONDS`, but `backend/src/aws_lambda.rs` still mints sessions with the default TTL and accepts websocket connects based on token presence without equivalent app-level origin enforcement. | Security, Privacy and Data Protection, Reliability, Portability        | Medium   | Medium     | Centralize session/origin policy in shared helpers or explicit gateway controls and add parity regression coverage.            | Platform owner   |
+| R-018 | Runtime responsibilities are concentrating in large files and duplicated policy code (`backend/src/aws_lambda.rs`, `backend/src/lib.rs`, `frontend/src/App.jsx`), increasing the chance of local/AWS drift and making changes harder to test safely. | Maintainability, Testability, Reliability, Robustness                  | Medium   | Medium     | Extract shared auth/validation/session helpers and thinner frontend/runtime modules before further protocol growth.            | Full-stack owner |
 
 ## NFR Hotspots
 
 - 🟡 Watch: Availability, Resilience, Performance, Scalability, Security, Manageability, Portability, Cost, Observability, Robustness, Reliability, Fault Tolerance, Testability, Maintainability, Privacy and Data Protection, Usability, Accessibility.
 - 🟢 Good: Flexibility, Input Validation (frame size, JSON shape, field limits hardened), Modularity.
 
+## Observed Anti-Patterns
+
+- Emerging god components: `backend/src/aws_lambda.rs` (1,213 lines) mixes auth HTTP handling, DynamoDB access, websocket orchestration, history paging, and validation, while `frontend/src/App.jsx` (414 lines) mixes auth UX, reconnect logic, history pagination, and message rendering. Resolution path: extract shared service modules, policy helpers, and thinner UI/runtime slices before adding more protocol features.
+
 ---
 
 ## Supply Chain Vulnerability Evidence (2026-04-24)
 
+- Revalidated during this sync with `cargo audit` and `npm audit`; current findings remain unchanged for Rust and Node.js.
 - **Rust (backend):**
 	- 3 moderate vulnerabilities in `rustls-webpki` (transitive via AWS SDK): reachable panic, name constraint issues ([RUSTSEC-2026-0104](https://rustsec.org/advisories/RUSTSEC-2026-0104), [RUSTSEC-2026-0098], [RUSTSEC-2026-0099]).
 	- Solution: Upgrade `rustls-webpki` to >=0.103.13 (requires upstream AWS SDK update).
 - **Node.js (frontend):**
 	- 5 moderate vulnerabilities in `vite`, `esbuild`, `vitest`, and related packages.
 	- Solution: Upgrade `vite` to 8.0.10+ and `vitest` to 4.1.5+ (major version bumps required).
-- **Python:** No actionable vulnerabilities found (no requirements.txt or Pipfile; only utility packages installed).
+- **Python:** The repo still has no project-managed Python dependency manifest; a fresh `pip_audit` rerun was not possible in the current shell because the tool is not installed for the available interpreters.

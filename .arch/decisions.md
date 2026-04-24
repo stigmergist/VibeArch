@@ -18,11 +18,11 @@
 
 ## ADR-003: Keep Chat State In-Memory
 
-- Status: accepted
+- Status: superseded
 - Date: 2026-04-23
 - Decision: Do not persist messages, users, or session state in v1.
 - Rationale: Keep project simple for learning/prototyping.
-- Consequences: No history across refresh/restart; accounts and sessions reset on restart; no horizontal scaling safety.
+- Consequences: This was the initial prototype stance and was later replaced by DynamoDB-backed persistence for the supported AWS-local and deployed handler path.
 
 ## ADR-004: Hard-Code WebSocket Endpoint For Local-First v1
 
@@ -76,9 +76,9 @@
 
 - Status: accepted
 - Date: 2026-04-23
-- Decision: Keep auth lightweight by using in-memory bearer tokens with a fixed TTL, add `POST /auth/logout` for explicit revocation, and enforce an `ALLOWED_ORIGINS` allowlist for browser auth requests and WebSocket upgrades.
-- Rationale: This closes the immediate impersonation/session-lifecycle gap without introducing persistence or a more complex token infrastructure before the project needs it.
-- Consequences: Sessions now expire and can be revoked, browser origins are narrowed by configuration, and backend tests can validate the lifecycle. Sessions still reset on process restart and do not support refresh/rotation.
+- Decision: Keep auth lightweight by using fixed-lifetime bearer sessions with explicit logout, and enforce an `ALLOWED_ORIGINS` allowlist where that runtime path owns HTTP or websocket browser entry.
+- Rationale: This closes the immediate impersonation and session-lifecycle gap without introducing a more complex token infrastructure before the project needs it.
+- Consequences: Sessions now expire and can be revoked, browser origins are narrowed where enforced, and backend tests can validate the lifecycle. The supported AWS-local and deployed handler path persists sessions in DynamoDB, while the direct Axum helper path still resets on process restart. Refresh/rotation remains out of scope.
 
 ## ADR-011: Use Rust And Axum For The Backend Runtime
 
@@ -95,3 +95,11 @@
 - Decision: Use S3 + CloudFront for the frontend and API Gateway + Lambda + DynamoDB for backend behavior in production.
 - Rationale: The desired billing model is pay-per-use rather than an always-on backend container, and AWS serverless infrastructure better matches that cost goal.
 - Consequences: User, session, and connection state now live in DynamoDB on the AWS path, local development is aligned around SAM plus the websocket gateway shim, and the remaining work shifts to deploy automation, observability, and production validation.
+
+## ADR-013: Use DynamoDB As The Supported State Store For The AWS-Oriented Runtime Path
+
+- Status: accepted
+- Date: 2026-04-24
+- Decision: Treat DynamoDB or DynamoDB Local as the system of record for users, sessions, active connections, and recent chat history in the supported SAM-local and deployed AWS path.
+- Rationale: The AWS-oriented runtime needs state that survives reconnects, supports websocket fan-out, and matches the production deployment target rather than the earlier in-memory prototype.
+- Consequences: Recent history replay, session persistence, and connection tracking now align across local AWS validation and the production target, while retention/privacy/capacity policy become first-class architectural concerns and the direct Axum helper path remains a convenience-only runtime.

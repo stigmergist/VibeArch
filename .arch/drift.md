@@ -3,14 +3,14 @@
 ## Customer And Business Consequence Snapshot
 
 - Reliability perception risk: transient disconnect recovery improved, and recent conversation now restores on join, but release confidence still depends on proving that reconnect, history replay, and session-revocation behavior stay correct outside local validation.
-- Release confidence risk: production readiness claims can still outpace evidence until deployed AWS validation, CI checks, and routed alarm actions are complete.
+- Security and trust risk: the docs previously implied stronger local-to-AWS policy parity than the code currently provides for session TTL and websocket origin handling.
 - Support and onboarding risk: the convenience local runtime and the AWS-parity local runtime now coexist, so their intended uses must stay clearly documented to avoid incorrect validation assumptions.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: deployed AWS validation, retention-policy, and alarm-routing drift still separate intended production readiness from current evidence.
-- 🟡 Watch closely: message contract evolution, deployment automation, and full accessibility verification remain partially resolved and user-impacting.
-- 🟢 Stable base: sender ownership, payload validation, safe cleanup behavior, persisted recent history, and baseline monitoring are aligned with intended architecture.
+- 🔴 Act now: deployed AWS validation, local-to-AWS auth/origin policy drift, and retention-policy/alarm-routing gaps still separate intended production readiness from current evidence.
+- 🟡 Watch closely: message contract evolution, deployment automation, duplicated runtime-policy logic, and full accessibility verification remain partially resolved and user-impacting.
+- 🟢 Stable base: sender ownership, payload validation, safe cleanup behavior, persisted recent history, baseline monitoring, and local runtime preflight checks are aligned with intended architecture.
 
 ## Quality Status Snapshot
 
@@ -22,9 +22,21 @@
 - Intended: runtime configuration should be environment-aware.
   - Observed (resolved 2026-04-23): frontend now reads `VITE_CHAT_WS_URL` in `frontend/src/App.jsx` and falls back to the local default when unset.
   - Observed (extended 2026-04-23): frontend now also supports explicit `VITE_AUTH_BASE_URL` override for AWS deployments where auth and websocket endpoints differ.
-  - Observed (extended 2026-04-23): backend now also reads `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings across the shared runtime.
-  - Remaining gap: deployment-time env injection conventions beyond the current frontend socket/auth contract and backend auth/session settings are still incomplete.
+  - Observed (extended 2026-04-23): backend local/helper runtime reads `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings.
+  - Remaining gap: `backend/src/aws_lambda.rs` still mints sessions with `DEFAULT_SESSION_TTL_SECONDS` rather than shared `SESSION_TTL_SECONDS`, and deployment-time env injection conventions beyond the current frontend socket/auth contract remain incomplete.
   - Status: 🟡 partially resolved.
+
+- Intended: trust-boundary controls should stay consistent between the supported local path and the deployed AWS path.
+  - Observed: `backend/src/lib.rs` rejects disallowed HTTP origins and websocket origins using `ALLOWED_ORIGINS`, but `backend/src/aws_lambda.rs` currently accepts websocket connects based on bearer-token validity alone, while `infra/aws/template.yaml` constrains HTTP CORS rather than websocket origin policy.
+  - Impact: deployed websocket protection depends more on infrastructure perimeter settings than on the same shared application rules exercised locally.
+  - Proposed correction: centralize origin policy in shared helpers where possible, or explicitly document and test the API Gateway/WAF control that replaces it.
+  - Status: 🟡 partially resolved.
+
+- Intended: payload validation and session policy should have one shared implementation path.
+  - Observed: `parse_and_validate()` exists in both `backend/src/lib.rs` and `backend/src/aws_lambda.rs`, and session TTL policy differs between those runtime paths.
+  - Impact: future message-contract or auth-policy changes can land in one runtime and silently miss the other.
+  - Proposed correction: extract shared validation/session helpers plus parity tests that exercise both local and AWS handlers.
+  - Status: 🔴 unresolved.
 
 - Intended: sender identity should be server-owned after authentication.
   - Observed (resolved 2026-04-23): `POST /auth/register` and `POST /auth/login` now mint fixed-expiry session tokens, `WS /ws/chat` requires `?token=...`, and the shared backend path rejects any client-supplied `sender` while stamping outbound messages from the authenticated display name.
@@ -60,6 +72,12 @@
   - Impact: the supported local backend path now matches the AWS-oriented code path, but production rollout remains incomplete.
   - Proposed correction: standardize SAM build/deploy automation, add CI-backed validation, and run deployed smoke tests.
 
+- Intended: component boundaries should stay small enough that policy changes can be made once and verified safely.
+  - Observed: `backend/src/aws_lambda.rs` is 1,213 lines, `backend/src/lib.rs` is 955 lines, and `frontend/src/App.jsx` is 414 lines, with auth, transport, history, validation, and UX orchestration increasingly concentrated in those files.
+  - Impact: maintenance cost and regression risk rise because future changes are more likely to create runtime-specific drift or broad retest needs.
+  - Proposed correction: extract shared policy modules and thinner UI/runtime slices before adding more protocol or deployment features.
+  - Status: 🟡 partially resolved.
+
 - Intended: production backend billing should align closely with real usage through AWS Lambda.
   - Observed: the shared backend crate now contains DynamoDB-backed Lambda auth/session/connection handlers and API Gateway Management API fan-out, and the supported local backend path now runs through SAM plus the local websocket gateway shim.
   - Impact: the pay-per-use production model is now implementable, but it still needs deployment validation and cost guardrails before being treated as production-ready.
@@ -86,5 +104,6 @@
 ## Open Questions
 
 - Should the project eventually add token refresh/rotation, or keep the current fixed-lifetime re-login model?
+- Should AWS websocket origin policy be enforced in-handler, at API Gateway, or by an explicit WAF/custom-domain boundary?
 - Should reconnect include server-provided short history window?
 - Is this service intended to stay single-room, or should room/channel concepts be introduced?

@@ -38,6 +38,11 @@ Primary implementation: `compose.aws-local.yaml`, `docker-compose.yml`, `fronten
 4. Route the new structured logs and health/SLO telemetry into deployed monitoring, then add operational runbook content.
 5. Define release and rollback procedure.
 
+## Good Patterns To Preserve
+
+- Preflight failure checks: `backend/Makefile` now stops early when DynamoDB Local or SAM build artifacts are missing, which reduces misleading browser-side failures.
+- Local/deployed smoke symmetry: the same smoke harness can validate SAM-local and deployed AWS endpoints, which is a strong foundation for future CI/CD gatekeeping.
+
 ## Recent Evidence
 
 - `backend/Makefile` now includes `require-local-dynamodb` and `require-sam-build` so `make local-aws-dev`, `make sam-local-api`, and `make sam-local-ws-gateway` fail with actionable setup messages when local prerequisites are missing.

@@ -32,14 +32,14 @@ This wiki is the architecture source of truth for the repository.
 ## NFR And Deployability Snapshot
 
 - NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/security/manageability/portability/cost/robustness/reliability/fault tolerance/observability/testability/maintainability/privacy and data protection/usability/accessibility.
-- Deployability today: stronger for real chat continuity because the supported AWS-local development path now persists recent conversation history in the same DynamoDB-backed handler flow used for AWS. The stack also has baseline CloudWatch monitoring, but production still lacks CI/CD, alarm routing, secrets handling, retention policy decisions for stored messages, and repeated deployed validation in release operations.
+- Deployability today: stronger for real chat continuity because the supported AWS-local development path now persists recent conversation history in the same DynamoDB-backed handler flow used for AWS. The stack also has baseline CloudWatch monitoring, but production still lacks CI/CD, alarm routing, secrets handling, retention policy decisions for stored messages, repeated deployed validation in release operations, and full local-to-AWS parity for origin/session policy handling.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: deployed AWS validation, CI/CD enforcement, and message-retention/alarm-routing gaps are the main launch-confidence risks.
-- 🟡 Watch closely: reliability and delivery-speed still depend on release enforcement for deployed smoke checks, tuned thresholds, and history-pagination regression coverage.
-- 🟢 Stable base: input validation, modular boundaries, server-owned sender identity, persisted recent conversation history, and baseline service monitoring are in a good state.
+- 🔴 Act now: deployed AWS validation, CI/CD enforcement, and local-to-AWS auth/origin policy parity are the main launch-confidence risks.
+- 🟡 Watch closely: reliability and delivery speed still depend on tuned thresholds, history-pagination regression coverage, and reducing duplicated policy logic across runtime paths.
+- 🟢 Stable base: input validation, server-owned sender identity, persisted recent conversation history, preflight local runtime checks, and baseline service monitoring are in a good state.
 
 ## Recommended Action Index
 

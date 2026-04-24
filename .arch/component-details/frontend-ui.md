@@ -45,6 +45,11 @@ Primary implementation: `frontend/src/App.jsx`
 4. Add keyboard-focused accessibility checks and an accessibility audit.
 5. Decide whether the restored-history UX needs unread separators, scroll anchors, or stronger continuity cues.
 
+## Good Patterns To Preserve
+
+- Progressive history loading: the UI restores the newest saved page on join and only requests older history while scrolling upward, which keeps continuity without fetching the full backlog.
+- Bounded reconnect with explicit status: retry behavior is visible to the user and avoids silent loops, which is a solid baseline for future resilience improvements.
+
 ## Recent Evidence
 
 - `frontend/src/App.jsx` now retries unexpected socket closes up to three times and surfaces reconnect progress to the user.

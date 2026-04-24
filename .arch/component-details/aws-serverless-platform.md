@@ -33,15 +33,21 @@ Primary implementation target: `infra/aws/README.md`, `infra/aws/template.yaml`,
 ## Risks And Gaps
 
 - API Gateway WebSocket pricing still includes connection-minute cost, so “pay only when used” is approximate rather than zero-idle.
-- The shared Lambda path now persists auth/session/message/connection state, performs API Gateway fan-out, and runs locally through SAM plus the websocket gateway shim. A deployed smoke harness now exists, the backend now emits structured logs plus minimum telemetry, and the SAM stack now provisions a dashboard plus baseline alarms, but CI/CD, secrets management, retention policy, alarm routing, and repeated deployed AWS validation are still incomplete.
+- The shared Lambda path now persists auth/session/message/connection state, performs API Gateway fan-out, and runs locally through SAM plus the websocket gateway shim. A deployed smoke harness now exists, the backend now emits structured logs plus minimum telemetry, and the SAM stack now provisions a dashboard plus baseline alarms, but CI/CD, secrets management, retention policy, alarm routing, repeated deployed AWS validation, and parity with the local origin/session policy are still incomplete.
 
 ## Recommended Actions
 
 1. Run the deployed AWS smoke path regularly in release validation so the implemented harness becomes an operational guardrail rather than a one-off test.
 2. Finalize production env vars and public domain topology for `VITE_CHAT_WS_URL` and `VITE_AUTH_BASE_URL`.
-3. Define retention, privacy, and capacity expectations for the persisted `Messages` table.
-4. Attach the new CloudWatch alarms to incident routing, tune thresholds from real traffic, and fold the dashboard into rollout/rollback procedures.
-5. Add CI/CD and secrets handling for the AWS deployment path.
+3. Decide whether websocket origin policy lives in shared handler code, API Gateway configuration, or another explicit edge control, then test that boundary.
+4. Define retention, privacy, and capacity expectations for the persisted `Messages` table.
+5. Attach the new CloudWatch alarms to incident routing, tune thresholds from real traffic, and fold the dashboard into rollout/rollback procedures.
+6. Add CI/CD and secrets handling for the AWS deployment path.
+
+## Good Patterns To Preserve
+
+- One backend crate for local and AWS handler logic: this keeps most transport and persistence semantics in one codebase instead of forcing separate service implementations.
+- Smoke-test symmetry: the same auth-plus-websocket round-trip can run against SAM local and deployed AWS endpoints, which is a strong release-confidence pattern once enforced consistently.
 
 ## Recent Evidence
 

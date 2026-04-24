@@ -1,5 +1,19 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 36)
+
+- Ran a full architecture resync after the workspace-instruction changes added explicit requirements for threat modeling, anti-pattern tracking, preserved good patterns, and stricter architecture-sync validation.
+- Updated `.arch/system-overview.md`, `.arch/risks.md`, `.arch/drift.md`, `.arch/data-flow.md`, `.arch/next-steps.md`, and `.arch/README.md` to reflect the real trust boundaries and current drift: the local runtime enforces `ALLOWED_ORIGINS` and configurable `SESSION_TTL_SECONDS`, while the AWS handler path still relies on token-only websocket connect checks and a default session TTL constant.
+- Updated `.arch/decisions.md` to supersede the old in-memory-state ADR and add the supported DynamoDB-backed state-store decision for the AWS-oriented runtime.
+- Added preserved good-pattern notes to the relevant component pages and recorded an emerging god-component anti-pattern risk backed by current file-size and responsibility concentration evidence.
+- Revalidated dependency-audit evidence: `cargo audit` still reports 3 Rust advisories in `rustls-webpki`, `npm audit` still reports 5 moderate Node.js advisories, and the repo still has no project-managed Python dependency manifest.
+- Scope reviewed: `.github/copilot-instructions.md`, `README.md`, `backend/src/lib.rs`, `backend/src/aws_lambda.rs`, `backend/tests/auth_lifecycle.rs`, `backend/Makefile`, `frontend/src/App.jsx`, `frontend/src/App.test.jsx`, `frontend/package.json`, `infra/aws/template.yaml`, and all `.arch/*.md` files.
+- Gate result: change-volume gate not triggered because the code-zone runtime surface did not change in this pass; this was an explicit documentation resync driven by instruction changes and evidence cleanup.
+- Re-ranked top 1-3 architecture actions now are:
+	1. Deployed AWS validation plus local-to-AWS auth/origin policy parity
+	2. CI/CD + alarm routing + rollback baseline
+	3. Message-retention, privacy, and capacity guardrails for the persisted history path
+
 ## 2026-04-24 (update 35)
 
 - Ran a full supply chain vulnerability audit for backend (Rust), frontend (Node.js), and Python dependencies.

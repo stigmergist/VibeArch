@@ -63,10 +63,11 @@ sequenceDiagram
 
 1. Browser loads frontend and constructs WebSocket client after a session token is available.
 2. Client connects to `ws://127.0.0.1:3001/ws/chat?token=...` in the supported local workflow.
-3. Backend checks the request `Origin` header against the configured allowlist and rejects the socket with close code `1008` when the origin is not allowed.
+3. In the local Axum/helper path, backend checks the request `Origin` header against the configured allowlist and rejects the socket with close code `1008` when the origin is not allowed.
 4. Shared handler code looks up the session token, rejects expired or revoked sessions, and closes the socket when auth fails.
 5. Shared handler code registers the connection in DynamoDB or DynamoDB Local.
 6. Backend broadcasts a system join event using the authenticated display name.
+7. In the deployed AWS websocket path, equivalent origin protection is not yet enforced in handler code; the boundary currently relies on token gating plus API Gateway or other edge configuration.
 
 ## Flow: Send Message
 
@@ -122,5 +123,5 @@ sequenceDiagram
 
 - Frontend <-> Backend boundary: HTTP JSON auth endpoints plus WebSocket JSON chat protocol.
 - Frontend runtime config boundary: `VITE_CHAT_WS_URL` must resolve to the websocket gateway or deployed WebSocket API; `VITE_AUTH_BASE_URL` may explicitly point at the matching auth API.
-- Backend runtime config boundary: `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings define auth, persistence, history pagination, and local routing behavior.
+- Backend runtime config boundary: `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings define auth, persistence, history pagination, and local routing behavior, but the AWS handler path does not yet consume all of that policy uniformly.
 - External systems: DynamoDB Local for supported local runs and DynamoDB/API Gateway in AWS.
