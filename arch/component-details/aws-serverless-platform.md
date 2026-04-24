@@ -46,6 +46,7 @@ Primary implementation target: `infra/aws/README.md`, `infra/aws/template.yaml`,
 
 - `backend/tests/aws_local_smoke.rs` now exercises register plus websocket message round-trip against the local SAM auth API and local websocket gateway.
 - `backend/tests/aws_local_smoke.rs` now also includes a deployed AWS smoke case driven by `SMOKE_AUTH_BASE_URL` and `SMOKE_CHAT_WS_URL`, and `backend/Makefile` can resolve those from CloudFormation outputs via `make aws-deployed-smoke`.
+- `backend/tests/auth_lifecycle.rs` now adds websocket lifecycle coverage for invalid payloads and revoked sessions, which strengthens confidence in the shared handler behavior before release-time AWS checks.
 - Browser validation succeeded against `http://127.0.0.1:3000/auth/*`, `ws://127.0.0.1:3001/ws/chat`, and the Vite frontend on `http://127.0.0.1:5173`.
 - `backend/src/aws_lambda.rs` now normalizes SAM-local logical table names and local DynamoDB/websocket defaults so the shared handlers run through the same code path locally and in AWS.
 - `backend/Makefile`, `compose.aws-local.yaml`, and `infra/aws/env.local.json` now define the supported local AWS workflow rather than a separate backend runtime.

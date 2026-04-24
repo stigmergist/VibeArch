@@ -1,5 +1,17 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 30)
+
+- Synced the wiki after adding broader backend and frontend regression coverage plus bounded frontend reconnect behavior.
+- Updated architecture evidence to reflect the new Vitest frontend harness, expanded websocket lifecycle coverage in `backend/tests/auth_lifecycle.rs`, and the partial closure of reconnect/accessibility drift in `frontend/src/App.jsx`.
+- Scope reviewed: `frontend/src/App.jsx`, `frontend/src/App.test.jsx`, `frontend/src/test/setup.js`, `frontend/package.json`, `frontend/vite.config.js`, `backend/tests/auth_lifecycle.rs`, `arch/README.md`, `arch/system-overview.md`, `arch/next-steps.md`, `arch/risks.md`, `arch/drift.md`, `arch/component-details/frontend-ui.md`, `arch/component-details/chat-api.md`, `arch/component-details/build-runtime-tooling.md`, and `arch/component-details/aws-serverless-platform.md`.
+- Trigger signal: change-volume gate triggered (7 code-zone files changed, including runtime behavior and test-surface expansion).
+- Stable vs changed: system boundaries and production target stayed stable; reconnect resilience, accessibility signaling, and regression evidence improved, while CI enforcement and deployed release validation remain the top gaps.
+- Re-ranked top 1-3 architecture actions remain:
+	1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+	2. CI/CD + observability + rollback baseline
+	3. CI-enforced regression coverage that includes the deployed serverless flow
+
 ## 2026-04-24 (update 29)
 
 - Added a deployed AWS smoke harness by reusing `backend/tests/aws_local_smoke.rs` for both SAM-local and deployed endpoints.

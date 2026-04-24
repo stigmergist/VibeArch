@@ -39,10 +39,15 @@ Primary implementation: `backend/src/aws_lambda.rs`, `backend/src/lib.rs`, `back
 ## Recommended Actions
 
 1. Decide whether fixed-lifetime bearer sessions should gain refresh/rotation semantics.
-2. Add rate limiting and contract-level tests.
+2. Add rate limiting and move the growing contract-level tests into enforced CI coverage.
 3. Define a versioned message schema.
-4. Add websocket lifecycle tests and deployed-flow regression coverage.
+4. Extend websocket lifecycle validation into deployed-flow regression coverage and release checks.
 5. Introduce structured logging and metrics hooks.
+
+## Recent Evidence
+
+- `backend/tests/auth_lifecycle.rs` now covers invalid client payload rejection without disconnecting the socket.
+- `backend/tests/auth_lifecycle.rs` now also covers revoked-session behavior for an already-connected websocket client.
 
 ## Open Questions
 

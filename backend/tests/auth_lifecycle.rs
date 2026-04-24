@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, time::Duration};
 
-use futures::StreamExt;
+use futures::{SinkExt, StreamExt};
 use http::HeaderValue;
 use reqwest::Client;
 use serde_json::Value;
@@ -177,4 +177,110 @@ async fn disallowed_websocket_origin_is_rejected() {
         "http://evil.example",
     )
     .await;
+}
+
+#[tokio::test]
+async fn invalid_payload_returns_error_without_disconnect() {
+    let server = spawn_server(5).await;
+    let payload = register_user(&server).await;
+    let token = payload.get("token").unwrap().as_str().unwrap();
+
+    let mut request = server
+        .ws_url(&format!("/ws/chat?token={token}"))
+        .into_client_request()
+        .unwrap();
+    request
+        .headers_mut()
+        .insert("Origin", HeaderValue::from_static(ALLOWED_ORIGIN));
+    let (mut socket, _) = connect_async(request).await.unwrap();
+
+    let _ = socket.next().await;
+
+    socket
+        .send(Message::Text(r#"{"sender":"mallory","text":"hi"}"#.into()))
+        .await
+        .unwrap();
+
+    let error = next_json_message(&mut socket).await;
+    assert_eq!(error["type"], "error");
+    assert_eq!(error["text"], "Field 'sender' is server-owned and must not be sent by clients.");
+
+    socket
+        .send(Message::Text(r#"{"text":"hello after error"}"#.into()))
+        .await
+        .unwrap();
+
+    let chat = next_json_message(&mut socket).await;
+    assert_eq!(chat["type"], "message");
+    assert_eq!(chat["text"], "hello after error");
+}
+
+#[tokio::test]
+async fn revoked_session_errors_active_socket_on_next_message() {
+    let server = spawn_server(30).await;
+    let payload = register_user(&server).await;
+    let token = payload.get("token").unwrap().as_str().unwrap();
+
+    let mut request = server
+        .ws_url(&format!("/ws/chat?token={token}"))
+        .into_client_request()
+        .unwrap();
+    request
+        .headers_mut()
+        .insert("Origin", HeaderValue::from_static(ALLOWED_ORIGIN));
+    let (mut socket, _) = connect_async(request).await.unwrap();
+
+    let _ = socket.next().await;
+
+    let client = Client::new();
+    let logout = client
+        .post(server.http_url("/auth/logout"))
+        .header("Origin", ALLOWED_ORIGIN)
+        .header("Authorization", format!("Bearer {token}"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(logout.status(), reqwest::StatusCode::NO_CONTENT);
+
+    let send_result = socket
+        .send(Message::Text(r#"{"text":"still here?"}"#.into()))
+        .await;
+
+    match send_result {
+        Ok(()) => {
+            match tokio::time::timeout(Duration::from_secs(5), socket.next()).await {
+                Ok(Some(Ok(Message::Text(text)))) => {
+                    let error: Value = serde_json::from_str(text.as_ref()).unwrap();
+                    assert_eq!(error["type"], "error");
+                    assert_eq!(error["text"], "Authentication required or session expired.");
+
+                    match socket.next().await {
+                        Some(Ok(Message::Close(_))) | Some(Err(_)) | None => {}
+                        other => panic!("expected socket termination after revoked session, got {other:?}"),
+                    }
+                }
+                Ok(Some(Err(_))) | Ok(None) => {}
+                Ok(Some(other)) => panic!("expected error frame or termination after revocation, got {other:?}"),
+                Err(_) => panic!("timed out waiting for revoked-session termination"),
+            }
+        }
+        Err(_) => {}
+    }
+}
+
+async fn next_json_message(
+    socket: &mut tokio_tungstenite::WebSocketStream<
+        tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+    >,
+) -> Value {
+    let message = tokio::time::timeout(Duration::from_secs(5), socket.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+
+    match message {
+        Message::Text(text) => serde_json::from_str(text.as_ref()).unwrap(),
+        other => panic!("expected text frame, got {other:?}"),
+    }
 }

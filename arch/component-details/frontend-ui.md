@@ -31,18 +31,24 @@ Primary implementation: `frontend/src/App.jsx`
 ## Risks And Gaps
 
 - Socket URL is now environment-driven via `VITE_CHAT_WS_URL`, and the UI may derive `/auth/*` from that value when `VITE_AUTH_BASE_URL` is unset, so deployment-time value management must stay documented and consistent.
-- There is no reconnect/backoff behavior after socket loss.
+- Reconnect behavior now uses bounded retries with visible status feedback, but the UI still clears session state after retry exhaustion.
 - Session state is not persisted across refresh or explicit logout.
 - Session expiry is enforced by the backend, but the UI has no pre-expiry warning or refresh flow.
-- No accessibility support exists for announcing inbound messages to assistive technologies.
+- Live-region announcements now exist for status and message updates, but keyboard/focus accessibility has not been verified.
 
 ## Recommended Actions
 
-1. Add reconnect/backoff behavior with clear user-facing retry state.
-2. Add integration tests for auth flow, connection lifecycle, and error rendering.
+1. Decide whether reconnect should preserve session state or drafts beyond the current bounded retry window.
+2. Add integration tests for auth flow, connection lifecycle, and error rendering in CI.
 3. Decide whether session state should survive refresh and whether expiry should surface a clearer UX than forced re-login.
-4. Add `aria-live` handling and keyboard-focused accessibility checks.
+4. Add keyboard-focused accessibility checks and an accessibility audit.
 5. Keep the `VITE_CHAT_WS_URL` and `VITE_AUTH_BASE_URL` contract aligned with deployment documentation and build tooling.
+
+## Recent Evidence
+
+- `frontend/src/App.jsx` now retries unexpected socket closes up to three times and surfaces reconnect progress to the user.
+- `frontend/src/App.jsx` now marks status and message regions as live announcements for assistive technologies.
+- `frontend/src/App.test.jsx` now covers reconnect behavior and outbound payload shape with Vitest and Testing Library.
 
 ## Open Questions
 

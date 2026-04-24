@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 const socketUrl = import.meta.env.VITE_CHAT_WS_URL || 'ws://localhost:8000/ws/chat';
 const authBaseUrl =
   import.meta.env.VITE_AUTH_BASE_URL || socketUrl.replace(/^ws/i, 'http').replace(/\/ws\/chat$/, '/auth');
+const MAX_RECONNECT_ATTEMPTS = 3;
+const RECONNECT_DELAY_MS = 1_000;
 
 function formatTime(iso) {
   const date = new Date(iso);
@@ -23,33 +25,48 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [statusMessage, setStatusMessage] = useState('Sign in to join the chat.');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const socketRef = useRef(null);
   const listRef = useRef(null);
 
   useEffect(() => {
     if (!session) {
+      setReconnectAttempt(0);
       return undefined;
     }
 
-    let shouldResetSession = true;
+    let isDisposed = false;
+    let reconnectTimerId = null;
     const socket = new WebSocket(`${socketUrl}?token=${encodeURIComponent(session.token)}`);
     socketRef.current = socket;
 
     socket.onopen = () => {
       setConnected(true);
+      setReconnectAttempt(0);
       setStatusMessage(`Signed in as ${session.displayName}.`);
     };
     socket.onclose = () => {
       setConnected(false);
       socketRef.current = null;
-      if (shouldResetSession) {
+      if (isDisposed) {
+        return;
+      }
+      if (reconnectAttempt < MAX_RECONNECT_ATTEMPTS) {
+        const nextAttempt = reconnectAttempt + 1;
+        setStatusMessage(`Connection lost. Reconnecting (${nextAttempt}/${MAX_RECONNECT_ATTEMPTS})...`);
+        reconnectTimerId = window.setTimeout(() => {
+          setReconnectAttempt(nextAttempt);
+        }, RECONNECT_DELAY_MS);
+      } else {
         setSession(null);
         setStatusMessage('Connection closed. Sign in again to continue.');
       }
     };
     socket.onerror = () => {
       setConnected(false);
-      setStatusMessage('Unable to connect to chat. Check backend auth/session availability.');
+      if (!isDisposed) {
+        setStatusMessage('Unable to connect to chat. Check backend auth/session availability.');
+      }
     };
 
     socket.onmessage = (event) => {
@@ -58,10 +75,13 @@ export default function App() {
     };
 
     return () => {
-      shouldResetSession = false;
+      isDisposed = true;
+      if (reconnectTimerId !== null) {
+        window.clearTimeout(reconnectTimerId);
+      }
       socket.close();
     };
-  }, [session]);
+  }, [session, reconnectAttempt]);
 
   useEffect(() => {
     if (!listRef.current) {
@@ -110,6 +130,7 @@ export default function App() {
         throw new Error(payload.detail || 'Authentication failed.');
       }
 
+      setReconnectAttempt(0);
       setSession(payload);
       setDisplayName(payload.displayName);
       setPassword('');
@@ -142,6 +163,7 @@ export default function App() {
       setMessages([]);
       setDraft('');
       setPassword('');
+      setReconnectAttempt(0);
       setStatusMessage('Signed out.');
     }
   };
@@ -229,9 +251,9 @@ export default function App() {
           </button>
         </form>
 
-        <p className="eyebrow">{statusMessage}</p>
+        <p className="eyebrow" aria-live="polite">{statusMessage}</p>
 
-        <ul className="messages" ref={listRef}>
+        <ul className="messages" ref={listRef} aria-live="polite">
           {messages.length === 0 && <li className="empty">No messages yet. Say hello.</li>}
           {messages.map((message, index) => (
             <li key={`${message.sentAt}-${index}`} className={message.type === 'system' ? 'system' : message.type === 'error' ? 'error-msg' : ''}>

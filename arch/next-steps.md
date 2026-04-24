@@ -18,7 +18,7 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 1. Prevent launch-time trust failures by validating the deployed AWS handler path with smoke tests that mirror the now-working SAM-local flow, including the `$default` websocket route and DynamoDB-backed auth/session/connection behavior.
    Related components: [Chat API](component-details/chat-api.md), [Connection Manager](component-details/connection-manager.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
-2. Reduce customer-facing regressions and support churn by adding broader backend and frontend automated tests around chat protocol validation, error handling, disconnects, reconnect behavior, and the deployed serverless flow.
+2. Reduce customer-facing regressions and support churn by enforcing the growing backend and frontend regression suites in CI and extending them to the deployed serverless release flow.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 3. Improve release confidence and incident recovery by adding CI/CD, observability, and rollback procedure for the serverless target now that the first DynamoDB-backed Lambda path exists.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Frontend UI](component-details/frontend-ui.md)
@@ -27,13 +27,17 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 1. Protect service quality and infrastructure cost by adding per-connection rate limiting to complete protocol abuse hardening.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Connection Manager](component-details/connection-manager.md)
-2. Improve retention and inclusive usability by adding reconnect UX and accessibility support for inbound message announcements.
+2. Improve retention and inclusive usability by deciding how reconnect should handle session continuity, draft preservation, and accessibility verification after the new bounded retry flow.
    Related components: [Frontend UI](component-details/frontend-ui.md), [Frontend Styling](component-details/frontend-styling.md)
 3. Reduce deployment mistakes and onboarding friction by defining backend settings/config conventions to match the now-documented frontend env contract and the future AWS endpoint topology.
    Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Chat API](component-details/chat-api.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 
 ## 🟢 Completed Recently
 
+- 2026-04-24: Added frontend Vitest coverage for reconnect and outbound payload shape, plus backend websocket tests for invalid payload handling and revoked-session behavior.
+   Related components: [Frontend UI](component-details/frontend-ui.md), [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md)
+- 2026-04-24: Added bounded reconnect behavior and live-region status/message announcements in the frontend so transient disconnects no longer always force an immediate manual re-login.
+   Related components: [Frontend UI](component-details/frontend-ui.md), [Frontend Styling](component-details/frontend-styling.md)
 - 2026-04-24: Added a deployed AWS smoke harness that reuses the working SAM-local auth and websocket round-trip flow, with a Makefile target that can resolve `HttpApiUrl` and `WebSocketApiUrl` from CloudFormation outputs.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Chat API](component-details/chat-api.md)
 - 2026-04-24: Added explicit local startup preflight checks so missing DynamoDB Local or SAM build output fail early with actionable messages instead of surfacing as misleading browser-side errors.

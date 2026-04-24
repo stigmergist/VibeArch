@@ -38,7 +38,7 @@ This wiki is the architecture source of truth for the repository.
 ## Scan First (Traffic Light)
 
 - 🔴 Act now: observability and deployed AWS validation gaps are the main launch-confidence risks.
-- 🟡 Watch closely: reliability and delivery-speed depend on CI/CD, reconnect behavior, and broader integration coverage.
+- 🟡 Watch closely: reliability and delivery-speed still depend on CI/CD, release enforcement for deployed smoke checks, and deeper end-to-end coverage.
 - 🟢 Stable base: input validation, modular boundaries, and server-owned sender identity are in a good state.
 
 ## Recommended Action Index
@@ -55,6 +55,7 @@ This wiki is the architecture source of truth for the repository.
 
 ## Completed Recently
 
+- 2026-04-24: Added bounded frontend reconnect behavior plus frontend and backend regression tests for reconnect, protocol validation, and revoked-session handling.
 - 2026-04-24: Added a deployed AWS smoke harness that reuses the local SAM auth and websocket round-trip flow, with a Makefile target that can resolve stack outputs from CloudFormation.
 - 2026-04-24: Hardened the SAM-local startup path in `backend/Makefile` with explicit DynamoDB reachability and SAM build-artifact checks so local dependency failures stop early with actionable messages.
 - 2026-04-23: Validated the SAM-local auth path end to end from the browser, added a local websocket smoke test, and removed remaining local-runtime assumptions from the shared handler path.

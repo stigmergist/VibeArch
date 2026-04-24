@@ -2,14 +2,14 @@
 
 ## Customer And Business Consequence Snapshot
 
-- Reliability perception risk: users can still experience broken sessions after disconnects because reconnect behavior is not yet in place.
+- Reliability perception risk: transient disconnect recovery improved, but release confidence still depends on proving that reconnect and session-revocation behavior stay correct outside local validation.
 - Release confidence risk: production readiness claims can still outpace evidence until deployed AWS validation, CI checks, and observability are complete.
 - Support and onboarding risk: the convenience local runtime and the AWS-parity local runtime now coexist, so their intended uses must stay clearly documented to avoid incorrect validation assumptions.
 
 ## Scan First (Traffic Light)
 
 - 🔴 Act now: observability and deployed AWS validation drift still separate intended production readiness from current evidence.
-- 🟡 Watch closely: reconnect UX, message contract evolution, and deployment automation remain partially resolved and user-impacting.
+- 🟡 Watch closely: message contract evolution, deployment automation, and full accessibility verification remain partially resolved and user-impacting.
 - 🟢 Stable base: sender ownership, payload validation, and safe cleanup behavior are aligned with intended architecture.
 
 ## Quality Status Snapshot
@@ -43,9 +43,9 @@
   - Status: 🟢 fully resolved.
 
 - Intended: clients should recover gracefully from transient socket loss or backend restarts.
-  - Observed: frontend sets `connected` false on `onclose`/`onerror`, but there is no reconnect/backoff logic in `frontend/src/App.jsx`.
-  - Impact: transient server restarts or network blips end the chat session until the user refreshes manually.
-  - Proposed correction: add reconnect/backoff policy with bounded retries and UX feedback for reconnect attempts.
+  - Observed (partially resolved 2026-04-24): `frontend/src/App.jsx` now retries socket connection up to three times with explicit reconnect status feedback before clearing session state, and `frontend/src/App.test.jsx` covers the retry path.
+  - Remaining gap: restart/disconnect recovery is still not validated against the deployed AWS path, and the UI still drops the session after retry exhaustion instead of preserving longer continuity.
+  - Status: 🟡 partially resolved.
 
 - Intended: public message contract should have explicit evolution path.
   - Observed: protocol is implicit/unversioned in UI and backend logic.
@@ -72,9 +72,10 @@
   - Proposed correction: introduce structured logs and minimal telemetry (latency, connection count, error rate).
 
 - Intended: the chat experience should remain usable and accessible when messages arrive, validation errors occur, or connectivity changes.
-  - Observed: the UI shows auth/connection state and validation errors, but it has no reconnect UX, no assistive-tech announcement path for incoming messages, and no documented accessibility verification.
-  - Impact: users can be stranded after disconnects, and assistive-technology users may not be notified of new chat activity.
-  - Proposed correction: add reconnect status UX, `aria-live` support for message updates, and an accessibility audit.
+  - Observed (partially resolved 2026-04-24): the UI now shows reconnect status during bounded retries and marks both status and message regions as `aria-live`, while validation and auth errors continue to surface inline.
+  - Remaining gap: there is still no documented accessibility audit, keyboard/focus verification, draft persistence, or history recovery after reconnect.
+  - Impact: transient failures are less disruptive, but longer outages and accessibility regressions could still escape into production.
+  - Status: 🟡 partially resolved.
 
 ## Open Questions
 
