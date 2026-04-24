@@ -1,4 +1,10 @@
-# Simple Chat App (React + Rust)
+# Demonstrator Application for ArchOps CoPilot idea
+
+The copilot-instructions.md in /.github is thr main thing of interest.
+
+the commit history shows how this influences architectural improvement
+
+## Simple Chat App (React + Rust)
 
 A minimal real-time chat application with:
 - React frontend (Vite)
