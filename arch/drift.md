@@ -3,19 +3,18 @@
 ## Customer And Business Consequence Snapshot
 
 - Reliability perception risk: transient disconnect recovery improved, but release confidence still depends on proving that reconnect and session-revocation behavior stay correct outside local validation.
-- Release confidence risk: production readiness claims can still outpace evidence until deployed AWS validation, CI checks, and observability are complete.
+- Release confidence risk: production readiness claims can still outpace evidence until deployed AWS validation, CI checks, and deployed alerting are complete.
 - Support and onboarding risk: the convenience local runtime and the AWS-parity local runtime now coexist, so their intended uses must stay clearly documented to avoid incorrect validation assumptions.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: observability and deployed AWS validation drift still separate intended production readiness from current evidence.
+- 🔴 Act now: deployed AWS validation and alerting drift still separate intended production readiness from current evidence.
 - 🟡 Watch closely: message contract evolution, deployment automation, and full accessibility verification remain partially resolved and user-impacting.
 - 🟢 Stable base: sender ownership, payload validation, and safe cleanup behavior are aligned with intended architecture.
 
 ## Quality Status Snapshot
 
-- 🔴 Weak: observability.
-- 🟡 Watch: availability, resilience, performance, scalability, security, manageability, portability, cost, robustness, reliability, fault tolerance, testability, maintainability, privacy and data protection, usability, accessibility.
+- 🟡 Watch: availability, resilience, performance, scalability, security, manageability, portability, cost, observability, robustness, reliability, fault tolerance, testability, maintainability, privacy and data protection, usability, accessibility.
 - 🟢 Good: flexibility, input validation, modularity.
 
 ## Intended vs Observed
@@ -67,9 +66,10 @@
   - Proposed correction: validate the deployed Lambda path and add cost monitoring/budgets.
 
 - Intended: operational behavior should be observable.
-  - Observed: backend now emits basic application log messages for rejected payloads and unexpected runtime exceptions, but no structured logging, metrics, or alert hooks exist.
-  - Impact: incident detection and diagnosis would be slow in production.
-  - Proposed correction: introduce structured logs and minimal telemetry (latency, connection count, error rate).
+  - Observed (partially resolved 2026-04-24): backend entrypoints now emit structured JSON logs for auth, websocket, and broadcast events, and the local `GET /health` route now exposes minimum service counters, success-rate indicators, and SLO target thresholds.
+  - Remaining gap: deployed log sinks, dashboards, and alert hooks still do not exist.
+  - Impact: local and warm-container diagnosis is clearer, but production incident detection would still be too manual.
+  - Status: 🟡 partially resolved.
 
 - Intended: the chat experience should remain usable and accessible when messages arrive, validation errors occur, or connectivity changes.
   - Observed (partially resolved 2026-04-24): the UI now shows reconnect status during bounded retries and marks both status and message regions as `aria-live`, while validation and auth errors continue to surface inline.

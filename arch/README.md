@@ -31,13 +31,13 @@ This wiki is the architecture source of truth for the repository.
 
 ## NFR And Deployability Snapshot
 
-- NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/security/manageability/portability/cost/robustness/reliability/fault tolerance/testability/maintainability/privacy and data protection/usability/accessibility, 🔴 weak in observability.
-- Deployability today: strong for the supported AWS-local development path and materially closer to the target AWS runtime because local auth and websocket flows now run through the shared Lambda-oriented handlers. A deployed AWS smoke harness now exists, but production still lacks CI/CD, observability, secrets handling, and repeated deployed validation in release operations.
+- NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/security/manageability/portability/cost/robustness/reliability/fault tolerance/observability/testability/maintainability/privacy and data protection/usability/accessibility.
+- Deployability today: strong for the supported AWS-local development path and materially closer to the target AWS runtime because local auth and websocket flows now run through the shared Lambda-oriented handlers. A deployed AWS smoke harness now exists, and the backend now emits structured JSON logs plus minimum health/SLO telemetry, but production still lacks CI/CD, alerting, secrets handling, and repeated deployed validation in release operations.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: observability and deployed AWS validation gaps are the main launch-confidence risks.
+- 🔴 Act now: deployed AWS validation, CI/CD enforcement, and alerting gaps are the main launch-confidence risks.
 - 🟡 Watch closely: reliability and delivery-speed still depend on CI/CD, release enforcement for deployed smoke checks, and deeper end-to-end coverage.
 - 🟢 Stable base: input validation, modular boundaries, and server-owned sender identity are in a good state.
 
@@ -55,6 +55,7 @@ This wiki is the architecture source of truth for the repository.
 
 ## Completed Recently
 
+- 2026-04-24: Added structured JSON tracing across local and Lambda backend entrypoints, plus minimum service/SLO telemetry in the local health response.
 - 2026-04-24: Added bounded frontend reconnect behavior plus frontend and backend regression tests for reconnect, protocol validation, and revoked-session handling.
 - 2026-04-24: Added a deployed AWS smoke harness that reuses the local SAM auth and websocket round-trip flow, with a Makefile target that can resolve stack outputs from CloudFormation.
 - 2026-04-24: Hardened the SAM-local startup path in `backend/Makefile` with explicit DynamoDB reachability and SAM build-artifact checks so local dependency failures stop early with actionable messages.

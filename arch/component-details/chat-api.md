@@ -35,6 +35,7 @@ Primary implementation: `backend/src/aws_lambda.rs`, `backend/src/lib.rs`, `back
 - There is no refresh-token or token-rotation strategy.
 - Message contract is still implicit and unversioned.
 - There is no persisted chat state or message history.
+- Structured logs and minimum service counters now exist, but deployed alerting and dashboards do not.
 
 ## Recommended Actions
 
@@ -42,12 +43,13 @@ Primary implementation: `backend/src/aws_lambda.rs`, `backend/src/lib.rs`, `back
 2. Add rate limiting and move the growing contract-level tests into enforced CI coverage.
 3. Define a versioned message schema.
 4. Extend websocket lifecycle validation into deployed-flow regression coverage and release checks.
-5. Introduce structured logging and metrics hooks.
+5. Ship the new structured logs and telemetry to deployed monitoring and add alert thresholds.
 
 ## Recent Evidence
 
 - `backend/tests/auth_lifecycle.rs` now covers invalid client payload rejection without disconnecting the socket.
 - `backend/tests/auth_lifecycle.rs` now also covers revoked-session behavior for an already-connected websocket client.
+- `backend/src/lib.rs` and `backend/src/aws_lambda.rs` now emit structured auth, websocket, and broadcast log events and maintain minimum counters/SLO indicators through the shared telemetry module.
 
 ## Open Questions
 

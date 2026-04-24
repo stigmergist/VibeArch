@@ -38,6 +38,7 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{error, warn};
 
 pub mod aws_lambda;
+pub mod telemetry;
 
 pub const MAX_FRAME_BYTES: usize = 4_096;
 pub const MAX_TEXT_CHARS: usize = 1_000;
@@ -104,6 +105,7 @@ pub struct AppState {
     sessions: Arc<RwLock<SessionStore>>,
     connections: Arc<RwLock<HashMap<u64, UnboundedSender<String>>>>,
     next_connection_id: Arc<AtomicU64>,
+    telemetry: Arc<telemetry::ServiceTelemetry>,
 }
 
 impl AppState {
@@ -114,6 +116,7 @@ impl AppState {
             sessions: Arc::new(RwLock::new(SessionStore::new(settings.session_ttl_seconds))),
             connections: Arc::new(RwLock::new(HashMap::new())),
             next_connection_id: Arc::new(AtomicU64::new(1)),
+            telemetry: telemetry::shared_telemetry(),
         }
     }
 
@@ -122,22 +125,45 @@ impl AppState {
             Ok(encoded) => encoded,
             Err(err) => {
                 error!(error = %err, "failed to serialize broadcast payload");
+                self.telemetry.record_runtime_error();
                 return;
             }
         };
 
         let mut connections = self.connections.write().await;
-        connections.retain(|_, sender| sender.send(encoded.clone()).is_ok());
+        let targets = connections.len();
+        let mut delivered = 0usize;
+        let mut failed = 0usize;
+        connections.retain(|_, sender| {
+            let ok = sender.send(encoded.clone()).is_ok();
+            if ok {
+                delivered += 1;
+            } else {
+                failed += 1;
+            }
+            ok
+        });
+        self.telemetry.record_broadcast(targets, delivered, failed);
+        tracing::info!(
+            event = "broadcast",
+            targets,
+            delivered,
+            failed,
+            outcome = if failed == 0 { "success" } else { "partial_failure" },
+            "broadcast completed"
+        );
     }
 
     async fn add_connection(&self, sender: UnboundedSender<String>) -> u64 {
         let connection_id = self.next_connection_id.fetch_add(1, Ordering::Relaxed);
         self.connections.write().await.insert(connection_id, sender);
+        self.telemetry.record_websocket_connect(true);
         connection_id
     }
 
     async fn remove_connection(&self, connection_id: u64) {
         self.connections.write().await.remove(&connection_id);
+        self.telemetry.record_websocket_disconnect();
     }
 
     fn is_allowed_origin(&self, origin: Option<&str>) -> bool {
@@ -293,6 +319,7 @@ struct SessionResponse {
 #[derive(Serialize)]
 struct HealthResponse {
     status: &'static str,
+    telemetry: telemetry::TelemetrySnapshot,
 }
 
 #[derive(Serialize)]
@@ -379,7 +406,11 @@ pub async fn run(settings: Settings) -> Result<(), Box<dyn std::error::Error + S
 }
 
 async fn health() -> Json<HealthResponse> {
-    Json(HealthResponse { status: "ok" })
+    let telemetry = telemetry::shared_telemetry().snapshot();
+    Json(HealthResponse {
+        status: "ok",
+        telemetry,
+    })
 }
 
 async fn register(
@@ -387,6 +418,7 @@ async fn register(
     headers: HeaderMap,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<SessionResponse>), AppError> {
+    let started_at = std::time::Instant::now();
     ensure_allowed_http_origin(&state, &headers)?;
 
     let user = {
@@ -401,6 +433,16 @@ async fn register(
         sessions.create(&user)
     };
 
+    state.telemetry.record_auth(true);
+    tracing::info!(
+        event = "auth_request",
+        route = "register",
+        outcome = "success",
+        username = %user.username,
+        duration_ms = started_at.elapsed().as_millis() as u64,
+        "auth request completed"
+    );
+
     Ok((StatusCode::CREATED, Json(SessionResponse::from(session))))
 }
 
@@ -409,6 +451,7 @@ async fn login(
     headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<SessionResponse>, AppError> {
+    let started_at = std::time::Instant::now();
     ensure_allowed_http_origin(&state, &headers)?;
 
     let user = {
@@ -423,14 +466,34 @@ async fn login(
         sessions.create(&user)
     };
 
+    state.telemetry.record_auth(true);
+    tracing::info!(
+        event = "auth_request",
+        route = "login",
+        outcome = "success",
+        username = %user.username,
+        duration_ms = started_at.elapsed().as_millis() as u64,
+        "auth request completed"
+    );
+
     Ok(Json(SessionResponse::from(session)))
 }
 
 async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Result<StatusCode, AppError> {
+    let started_at = std::time::Instant::now();
     ensure_allowed_http_origin(&state, &headers)?;
     let token = extract_bearer_token(&headers)?;
     let mut sessions = state.sessions.write().await;
     sessions.revoke(&token);
+    state.telemetry.record_auth(true);
+    tracing::info!(
+        event = "auth_request",
+        route = "logout",
+        outcome = "success",
+        token_present = !token.is_empty(),
+        duration_ms = started_at.elapsed().as_millis() as u64,
+        "auth request completed"
+    );
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -452,6 +515,13 @@ async fn websocket_session(
     token: String,
 ) {
     if !state.is_allowed_origin(origin.as_deref()) {
+        state.telemetry.record_websocket_connect(false);
+        tracing::warn!(
+            event = "websocket_connect",
+            outcome = "rejected_origin",
+            origin = origin.as_deref().unwrap_or("<missing>"),
+            "websocket connect rejected"
+        );
         let mut socket = socket;
         close_socket(&mut socket, "Origin not allowed.").await;
         return;
@@ -463,6 +533,13 @@ async fn websocket_session(
     };
 
     let Some(identity) = identity else {
+        state.telemetry.record_websocket_connect(false);
+        tracing::warn!(
+            event = "websocket_connect",
+            outcome = "rejected_session",
+            origin = origin.as_deref().unwrap_or("<missing>"),
+            "websocket connect rejected"
+        );
         let mut socket = socket;
         close_socket(&mut socket, "Authentication required or session expired.").await;
         return;
@@ -471,6 +548,13 @@ async fn websocket_session(
     let (mut ws_sender, mut ws_receiver) = socket.split();
     let (connection_tx, mut connection_rx) = unbounded_channel::<String>();
     let connection_id = state.add_connection(connection_tx.clone()).await;
+    tracing::info!(
+        event = "websocket_connect",
+        outcome = "accepted",
+        connection_id,
+        username = %identity.username,
+        "websocket connect accepted"
+    );
 
     let writer = tokio::spawn(async move {
         while let Some(payload) = connection_rx.recv().await {
@@ -495,6 +579,14 @@ async fn websocket_session(
                     sessions.get(&identity.token)
                 };
                 if still_valid.is_none() {
+                    state.telemetry.record_runtime_error();
+                    tracing::warn!(
+                        event = "websocket_message",
+                        outcome = "expired_session",
+                        connection_id,
+                        username = %identity.username,
+                        "websocket message rejected because session expired"
+                    );
                     let _ = connection_tx.send(
                         serde_json::to_string(&ChatEvent::error(
                             "Authentication required or session expired.",
@@ -506,6 +598,16 @@ async fn websocket_session(
 
                 match parse_and_validate(&raw) {
                     Ok(Some(text)) => {
+                        let text_len = text.chars().count();
+                        state.telemetry.record_message_accepted();
+                        tracing::info!(
+                            event = "websocket_message",
+                            outcome = "accepted",
+                            connection_id,
+                            username = %identity.username,
+                            text_len,
+                            "websocket message accepted"
+                        );
                         state
                             .broadcast_json(&ChatEvent::message(
                                 identity.display_name.clone(),
@@ -515,7 +617,16 @@ async fn websocket_session(
                     }
                     Ok(None) => {}
                     Err(detail) => {
+                        state.telemetry.record_message_rejected();
                         warn!(detail = %detail, "rejected websocket payload");
+                        tracing::warn!(
+                            event = "websocket_message",
+                            outcome = "rejected_validation",
+                            connection_id,
+                            username = %identity.username,
+                            detail = %detail,
+                            "websocket message rejected"
+                        );
                         let _ = connection_tx.send(
                             serde_json::to_string(&ChatEvent::error(detail)).unwrap_or_default(),
                         );
@@ -525,13 +636,28 @@ async fn websocket_session(
             Ok(Message::Close(_)) => break,
             Ok(_) => {}
             Err(err) => {
+                state.telemetry.record_runtime_error();
                 error!(error = %err, "unexpected websocket error");
+                tracing::error!(
+                    event = "websocket_message",
+                    outcome = "runtime_error",
+                    connection_id,
+                    username = %identity.username,
+                    error = %err,
+                    "websocket session failed"
+                );
                 break;
             }
         }
     }
 
     state.remove_connection(connection_id).await;
+    tracing::info!(
+        event = "websocket_disconnect",
+        connection_id,
+        username = %identity.username,
+        "websocket disconnected"
+    );
     state
         .broadcast_json(&ChatEvent::system(format!(
             "{} left the chat",
@@ -546,6 +672,14 @@ fn ensure_allowed_http_origin(state: &AppState, headers: &HeaderMap) -> Result<(
     if state.is_allowed_origin(origin.as_deref()) {
         Ok(())
     } else {
+        state.telemetry.record_auth(false);
+        tracing::warn!(
+            event = "auth_request",
+            route = "origin_check",
+            outcome = "forbidden_origin",
+            origin = origin.as_deref().unwrap_or("<missing>"),
+            "http auth request rejected"
+        );
         Err(AppError::forbidden("Origin not allowed."))
     }
 }

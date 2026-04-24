@@ -28,14 +28,14 @@ Primary implementation: `compose.aws-local.yaml`, `docker-compose.yml`, `fronten
 - No CI workflow exists.
 - Local container packaging exists, and there is now a first AWS SAM scaffold built from the same backend crate used locally. Startup-hardening checks reduce misleading local failures, but production deployment automation, secrets handling, and runtime hardening conventions are still incomplete.
 - Frontend runtime configuration is environment-driven for `VITE_CHAT_WS_URL` and `VITE_AUTH_BASE_URL`, and backend session/origin policy is environment-driven via `ALLOWED_ORIGINS` and `SESSION_TTL_SECONDS`, but broader deployment injection conventions are still incomplete.
-- Observability and release/rollback procedures are undocumented.
+- Deployed observability rollout and release/rollback procedures are still undocumented.
 
 ## Recommended Actions
 
 1. Add CI for `cargo test`, frontend build validation, and future SAM validation/deploy checks.
 2. Extend and document deployment-time injection for `VITE_CHAT_WS_URL`, `VITE_AUTH_BASE_URL`, `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, and AWS table/runtime settings.
 3. Finish the AWS deployment scaffold with deploy automation, secrets handling, and runtime hardening.
-4. Add structured logging, metrics, and operational runbook content.
+4. Route the new structured logs and health/SLO telemetry into deployed monitoring, then add operational runbook content.
 5. Define release and rollback procedure.
 
 ## Recent Evidence
@@ -44,6 +44,7 @@ Primary implementation: `compose.aws-local.yaml`, `docker-compose.yml`, `fronten
 - `backend/Makefile` now also includes `make aws-deployed-smoke`, which can resolve `HttpApiUrl` and `WebSocketApiUrl` from CloudFormation outputs or accept explicit smoke endpoints.
 - `docker-compose.yml` plus `backend/src/main.rs` provide a one-command convenience runtime for frontend + direct Axum backend bring-up without changing the AWS-parity validation path.
 - `frontend/package.json`, `frontend/vite.config.js`, and `frontend/src/test/setup.js` now define a Vitest + jsdom + Testing Library frontend regression harness.
+- `backend/src/telemetry.rs` now centralizes JSON log initialization and minimum service/SLO counters shared by local and Lambda entrypoints.
 
 ## Open Questions
 

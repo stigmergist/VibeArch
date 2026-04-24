@@ -1,10 +1,10 @@
 use aws_lambda_events::event::apigw::ApiGatewayWebsocketProxyRequest;
-use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
-use simple_chat_backend::aws_lambda::handle_ws_send_message;
+use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+use simple_chat_backend::{aws_lambda::handle_ws_send_message, telemetry};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    tracing::init_default_subscriber();
+    telemetry::init_tracing();
     run(service_fn(handler)).await
 }
 

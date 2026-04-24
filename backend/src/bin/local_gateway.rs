@@ -35,11 +35,7 @@ struct ConnectQuery {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
-        )
-        .init();
+    simple_chat_backend::telemetry::init_tracing();
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3001").await?;
     info!("local websocket gateway listening on 127.0.0.1:3001");

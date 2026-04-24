@@ -1,5 +1,17 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 31)
+
+- Synced the wiki after adding structured JSON backend logs and minimum service/SLO telemetry.
+- Updated observability posture from "missing baseline" to "minimum baseline present" across the architecture docs, while keeping deployed alerting, dashboards, and release enforcement as open risks.
+- Scope reviewed: `backend/src/telemetry.rs`, `backend/src/lib.rs`, `backend/src/aws_lambda.rs`, `backend/src/main.rs`, `backend/src/bin/local_gateway.rs`, `backend/src/bin/auth.rs`, `backend/src/bin/ws_connect.rs`, `backend/src/bin/ws_disconnect.rs`, `backend/src/bin/ws_message.rs`, `backend/tests/auth_lifecycle.rs`, `arch/README.md`, `arch/system-overview.md`, `arch/next-steps.md`, `arch/risks.md`, `arch/drift.md`, `arch/component-details/chat-api.md`, `arch/component-details/build-runtime-tooling.md`, and `arch/component-details/aws-serverless-platform.md`.
+- Trigger signal: change-volume gate triggered (10+ code-zone files changed, including runtime observability behavior and a new shared telemetry module).
+- Stable vs changed: system boundaries and deployment target remained stable; operational visibility improved materially through structured logs and health/SLO telemetry, while CI/CD, deployed alerting, and repeated AWS validation remain the top launch gaps.
+- Re-ranked top 1-3 architecture actions remain:
+	1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+	2. CI/CD + deployed alerting + rollback baseline
+	3. CI-enforced regression coverage that includes the deployed serverless flow
+
 ## 2026-04-24 (update 30)
 
 - Synced the wiki after adding broader backend and frontend regression coverage plus bounded frontend reconnect behavior.

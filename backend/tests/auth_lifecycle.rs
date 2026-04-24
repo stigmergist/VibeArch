@@ -111,6 +111,23 @@ async fn register_returns_expiry_and_cors_header() {
 }
 
 #[tokio::test]
+async fn health_reports_minimum_service_telemetry() {
+    let server = spawn_server(5).await;
+    let client = Client::new();
+
+    let response = client.get(server.http_url("/health")).send().await.unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+    let payload: Value = response.json().await.unwrap();
+    assert_eq!(payload["status"], "ok");
+    assert!(payload["telemetry"]["uptimeSeconds"].is_number());
+    assert!(payload["telemetry"]["counters"]["authRequestsTotal"].is_number());
+    assert!(payload["telemetry"]["counters"]["broadcastAttemptsTotal"].is_number());
+    assert!(payload["telemetry"]["indicators"]["authSuccessRate"].is_number());
+    assert!(payload["telemetry"]["sloTargets"]["availabilityTarget"].is_number());
+}
+
+#[tokio::test]
 async fn register_rejects_disallowed_http_origin() {
     let server = spawn_server(5).await;
     let client = Client::new();

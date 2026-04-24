@@ -14,6 +14,7 @@ use sha2::Sha256;
 use subtle::ConstantTimeEq;
 
 use crate::{
+    telemetry,
     DEFAULT_SESSION_TTL_SECONDS, MAX_FRAME_BYTES, MAX_SENDER_CHARS, MAX_TEXT_CHARS,
     MAX_USERNAME_CHARS, MIN_PASSWORD_CHARS,
 };
@@ -328,13 +329,19 @@ impl AwsClients {
     }
 
     async fn broadcast_message(&self, message: &ChatEnvelope) -> Result<(), Error> {
+        let telemetry = telemetry::shared_telemetry();
         let Some(management) = &self.management else {
             tracing::info!("websocket management endpoint not configured; skipping fan-out");
+            telemetry.record_broadcast(0, 0, 0);
             return Ok(());
         };
 
         let payload = serde_json::to_vec(message).map_err(boxed)?;
-        for connection in self.list_connections().await? {
+        let connections = self.list_connections().await?;
+        let targets = connections.len();
+        let mut delivered = 0usize;
+        let mut failed = 0usize;
+        for connection in connections {
             let result = management
                 .post_to_connection()
                 .connection_id(connection.connection_id.clone())
@@ -347,9 +354,22 @@ impl AwsClients {
                 if error_text.contains("GoneException") || error_text.contains("410") {
                     let _ = self.delete_connection(&connection.connection_id).await;
                 }
+                failed += 1;
                 tracing::warn!(connection_id = %connection.connection_id, error = %error_text, "failed to post to websocket connection");
+            } else {
+                delivered += 1;
             }
         }
+
+        telemetry.record_broadcast(targets, delivered, failed);
+        tracing::info!(
+            event = "broadcast",
+            targets,
+            delivered,
+            failed,
+            outcome = if failed == 0 { "success" } else { "partial_failure" },
+            "aws websocket broadcast completed"
+        );
 
         Ok(())
     }
@@ -370,6 +390,7 @@ pub async fn handle_auth_http(request: Request) -> Result<Response<Body>, Error>
 pub async fn handle_ws_connect(
     request: ApiGatewayWebsocketProxyRequest,
 ) -> Result<WebsocketRouteResponse, Error> {
+    let telemetry = telemetry::shared_telemetry();
     let clients = AwsClients::from_ws_request(&request).await?;
     let connection_id = request
         .request_context
@@ -382,10 +403,14 @@ pub async fn handle_ws_connect(
         .unwrap_or_default();
 
     if token.is_empty() {
+        telemetry.record_websocket_connect(false);
+        tracing::warn!(event = "websocket_connect", outcome = "missing_token", connection_id = %connection_id, "websocket connect rejected");
         return ws_response(401, "Missing token for websocket connection.");
     }
 
     let Some(session) = clients.get_session(token).await? else {
+        telemetry.record_websocket_connect(false);
+        tracing::warn!(event = "websocket_connect", outcome = "expired_session", connection_id = %connection_id, "websocket connect rejected");
         return ws_response(401, "Authentication required or session expired.");
     };
 
@@ -396,6 +421,8 @@ pub async fn handle_ws_connect(
         connected_at: Utc::now().to_rfc3339(),
     };
     clients.put_connection(&connection).await?;
+    telemetry.record_websocket_connect(true);
+    tracing::info!(event = "websocket_connect", outcome = "accepted", connection_id = %connection_id, username = %session.username, "websocket connect accepted");
 
     clients
         .broadcast_message(&ChatEnvelope::system(format!(
@@ -410,6 +437,7 @@ pub async fn handle_ws_connect(
 pub async fn handle_ws_disconnect(
     request: ApiGatewayWebsocketProxyRequest,
 ) -> Result<WebsocketRouteResponse, Error> {
+    let telemetry = telemetry::shared_telemetry();
     let clients = AwsClients::from_ws_request(&request).await?;
     let connection_id = request
         .request_context
@@ -418,8 +446,10 @@ pub async fn handle_ws_disconnect(
 
     let connection = clients.get_connection(&connection_id).await?;
     clients.delete_connection(&connection_id).await?;
+    telemetry.record_websocket_disconnect();
 
     if let Some(connection) = connection {
+        tracing::info!(event = "websocket_disconnect", connection_id = %connection_id, username = %connection.username, "websocket disconnect accepted");
         clients
             .broadcast_message(&ChatEnvelope::system(format!(
                 "{} left the chat",
@@ -434,25 +464,35 @@ pub async fn handle_ws_disconnect(
 pub async fn handle_ws_send_message(
     request: ApiGatewayWebsocketProxyRequest,
 ) -> Result<WebsocketRouteResponse, Error> {
+    let telemetry = telemetry::shared_telemetry();
     let clients = AwsClients::from_ws_request(&request).await?;
     let connection_id = request
         .request_context
         .connection_id
         .unwrap_or_else(|| "unknown".to_string());
     let Some(connection) = clients.get_connection(&connection_id).await? else {
+        telemetry.record_runtime_error();
+        tracing::warn!(event = "websocket_message", outcome = "unregistered_connection", connection_id = %connection_id, "websocket message rejected");
         return ws_response(401, "Connection is not registered.");
     };
 
     let body = request.body.unwrap_or_default();
     match parse_and_validate(&body) {
         Ok(Some(text)) => {
+            let text_len = text.chars().count();
+            telemetry.record_message_accepted();
+            tracing::info!(event = "websocket_message", outcome = "accepted", connection_id = %connection_id, username = %connection.username, text_len, "websocket message accepted");
             clients
                 .broadcast_message(&ChatEnvelope::message(connection.display_name, text))
                 .await?;
             ws_response(200, "Message accepted.")
         }
         Ok(None) => ws_response(200, "Blank message ignored."),
-        Err(detail) => ws_response(400, detail),
+        Err(detail) => {
+            telemetry.record_message_rejected();
+            tracing::warn!(event = "websocket_message", outcome = "rejected_validation", connection_id = %connection_id, username = %connection.username, detail = %detail, "websocket message rejected");
+            ws_response(400, detail)
+        }
     }
 }
 
@@ -572,28 +612,45 @@ pub fn parse_and_validate(raw: &str) -> Result<Option<String>, &'static str> {
 }
 
 async fn register(request: Request) -> Result<Response<Body>, Error> {
+    let started_at = std::time::Instant::now();
+    let telemetry = telemetry::shared_telemetry();
     let clients = AwsClients::from_http_env().await?;
     let payload: RegisterRequest = match parse_json_body(request.body()) {
         Ok(payload) => payload,
-        Err(detail) => return json_response(StatusCode::BAD_REQUEST, json!({ "detail": detail })),
+        Err(detail) => {
+            telemetry.record_auth(false);
+            tracing::warn!(event = "auth_request", route = "register", outcome = "invalid_json", detail = %detail, "auth request rejected");
+            return json_response(StatusCode::BAD_REQUEST, json!({ "detail": detail }));
+        }
     };
     let user = match new_user_record(payload) {
         Ok(user) => user,
-        Err(detail) => return json_response(StatusCode::BAD_REQUEST, json!({ "detail": detail })),
+        Err(detail) => {
+            telemetry.record_auth(false);
+            tracing::warn!(event = "auth_request", route = "register", outcome = "invalid_input", detail = %detail, "auth request rejected");
+            return json_response(StatusCode::BAD_REQUEST, json!({ "detail": detail }));
+        }
     };
 
     if clients.get_user(&user.username).await?.is_some() {
+        telemetry.record_auth(false);
+        tracing::warn!(event = "auth_request", route = "register", outcome = "duplicate_username", username = %user.username, "auth request rejected");
         return json_response(StatusCode::BAD_REQUEST, json!({ "detail": "Username is already registered." }));
     }
 
     clients.put_user(&user).await?;
     let session = new_session_record(&user);
     clients.put_session(&session).await?;
+    telemetry.record_auth(true);
 
     tracing::info!(
+        event = "auth_request",
+        route = "register",
+        outcome = "success",
         users_table = %clients.layout.users_table,
         sessions_table = %clients.layout.sessions_table,
         username = %user.username,
+        duration_ms = started_at.elapsed().as_millis() as u64,
         "register handler stored user and session records"
     );
 
@@ -601,30 +658,49 @@ async fn register(request: Request) -> Result<Response<Body>, Error> {
 }
 
 async fn login(request: Request) -> Result<Response<Body>, Error> {
+    let started_at = std::time::Instant::now();
+    let telemetry = telemetry::shared_telemetry();
     let clients = AwsClients::from_http_env().await?;
     let payload: LoginRequest = match parse_json_body(request.body()) {
         Ok(payload) => payload,
-        Err(detail) => return json_response(StatusCode::BAD_REQUEST, json!({ "detail": detail })),
+        Err(detail) => {
+            telemetry.record_auth(false);
+            tracing::warn!(event = "auth_request", route = "login", outcome = "invalid_json", detail = %detail, "auth request rejected");
+            return json_response(StatusCode::BAD_REQUEST, json!({ "detail": detail }));
+        }
     };
     let username = match normalize_username(&payload.username) {
         Ok(username) => username,
-        Err(detail) => return json_response(StatusCode::BAD_REQUEST, json!({ "detail": detail })),
+        Err(detail) => {
+            telemetry.record_auth(false);
+            tracing::warn!(event = "auth_request", route = "login", outcome = "invalid_username", detail = %detail, "auth request rejected");
+            return json_response(StatusCode::BAD_REQUEST, json!({ "detail": detail }));
+        }
     };
 
     let Some(user) = clients.get_user(&username).await? else {
+        telemetry.record_auth(false);
+        tracing::warn!(event = "auth_request", route = "login", outcome = "missing_user", username = %username, "auth request rejected");
         return json_response(StatusCode::UNAUTHORIZED, json!({ "detail": "Invalid username or password." }));
     };
     if authenticate_user(&user, &payload).is_err() {
+        telemetry.record_auth(false);
+        tracing::warn!(event = "auth_request", route = "login", outcome = "invalid_password", username = %username, "auth request rejected");
         return json_response(StatusCode::UNAUTHORIZED, json!({ "detail": "Invalid username or password." }));
     }
 
     let session = new_session_record(&user);
     clients.put_session(&session).await?;
+    telemetry.record_auth(true);
 
     tracing::info!(
+        event = "auth_request",
+        route = "login",
+        outcome = "success",
         users_table = %clients.layout.users_table,
         sessions_table = %clients.layout.sessions_table,
         username = %username,
+        duration_ms = started_at.elapsed().as_millis() as u64,
         "login handler loaded user and stored session"
     );
 
@@ -632,6 +708,8 @@ async fn login(request: Request) -> Result<Response<Body>, Error> {
 }
 
 async fn logout(request: Request) -> Result<Response<Body>, Error> {
+    let started_at = std::time::Instant::now();
+    let telemetry = telemetry::shared_telemetry();
     let clients = AwsClients::from_http_env().await?;
     let headers = request.headers();
     let authorization = headers
@@ -641,13 +719,22 @@ async fn logout(request: Request) -> Result<Response<Body>, Error> {
 
     let token = match extract_bearer_token(authorization) {
         Ok(token) => token,
-        Err(detail) => return json_response(StatusCode::UNAUTHORIZED, json!({ "detail": detail })),
+        Err(detail) => {
+            telemetry.record_auth(false);
+            tracing::warn!(event = "auth_request", route = "logout", outcome = "missing_bearer", detail = %detail, "auth request rejected");
+            return json_response(StatusCode::UNAUTHORIZED, json!({ "detail": detail }));
+        }
     };
     clients.delete_session(&token).await?;
+    telemetry.record_auth(true);
 
     tracing::info!(
+        event = "auth_request",
+        route = "logout",
+        outcome = "success",
         sessions_table = %clients.layout.sessions_table,
         token_present = !token.is_empty(),
+        duration_ms = started_at.elapsed().as_millis() as u64,
         "logout handler revoked session"
     );
 
