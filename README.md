@@ -1,8 +1,8 @@
 # Demonstrator Application for ArchOps CoPilot idea
 
-The copilot-instructions.md in /.github is thr main thing of interest.
+The copilot-instructions.md in /.github is the main thing of interest.
 
-the commit history shows how this influences architectural improvement
+The commit history shows how this influences architectural improvement
 
 ## Simple Chat App (React + Rust)
 
