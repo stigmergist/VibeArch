@@ -2,13 +2,13 @@
 
 ## Customer And Business Risk Summary
 
-- Highest customer trust risk: shipping the AWS path without deployed validation, CI gates, and observability can create visible reliability failures that hurt confidence early.
+- Highest customer trust risk: shipping the AWS path without repeated deployed validation, CI gates, and observability can create visible reliability failures that hurt confidence early.
 - Highest delivery-speed risk: missing CI/CD and broad integration coverage increases regression risk and slows feature velocity due to manual verification and rework.
 - Highest cost and operations risk: limited telemetry and unclear WebSocket cost guardrails can increase incident recovery time and make unit economics harder to predict.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: R-013 (deployed AWS path still unvalidated) and R-009 (observability baseline missing) are the most direct customer-trust and incident-recovery risks.
+- 🔴 Act now: R-013 (deployed AWS path not yet validated consistently in release operations) and R-009 (observability baseline missing) are the most direct customer-trust and incident-recovery risks.
 - 🟡 Watch closely: R-008, R-006, and R-010 can amplify regressions and user-visible instability during release cycles.
 - 🟢 Stable base: R-001, R-002, and R-005 are mitigated and currently low-risk.
 
@@ -26,7 +26,7 @@
 | R-010 | Client has no reconnect/backoff behavior after socket loss or backend restart                                                                                                                                        | Resilience, Availability, Reliability, Fault Tolerance, Usability      | Medium   | Medium     | Add reconnect/backoff policy and test restart/disconnect recovery end to end                 | Frontend owner   |
 | R-011 | No explicit accessibility validation for the chat UI                                                                                                                                                                 | Accessibility, Usability                                               | Medium   | Medium     | Add accessibility audit, keyboard/focus checks, and live-region support for inbound messages | Frontend owner   |
 | R-012 | Local Axum user and session state are still in-memory only; the AWS path persists them in DynamoDB, but there is still no refresh/rotation strategy and local restarts still reset dev state                   | Security, Reliability, Privacy and Data Protection                     | Medium   | Medium     | Decide whether token refresh/rotation is required and whether local/dev parity needs persistent storage | Backend owner    |
-| R-013 | The chosen AWS Lambda production target now has a real implementation in the shared crate, but it has not yet been validated through deployed smoke tests, CI, or production observability                     | Portability, Deployability, Scalability, Reliability                   | Medium   | Medium     | Add SAM/deployed validation, CI checks, and operational telemetry before production rollout  | Platform owner   |
+| R-013 | The chosen AWS Lambda production target now has a real implementation in the shared crate, and a deployed smoke harness exists, but it has not yet been validated consistently through deployed smoke runs, CI, or production observability | Portability, Deployability, Scalability, Reliability                   | Medium   | Medium     | Run deployed smoke validation as part of release checks, then add CI checks and operational telemetry before production rollout | Platform owner   |
 | R-014 | AWS API Gateway WebSocket pricing adds connection-minute cost, so the pay-per-use expectation can be misunderstood                                                                                                  | Cost                                                                   | Medium   | Medium     | Model expected concurrent usage and set CloudWatch budgets/alarms before production rollout   | Platform owner   |
 
 ## NFR Hotspots

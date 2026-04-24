@@ -132,7 +132,35 @@ Notes:
 
 ## Remaining Work
 
-1. Validate the SAM template and local workflow against a real `sam local` installation.
+## Deployed Smoke Validation
+
+After deploying the stack, run the same end-to-end auth plus websocket flow against the real AWS endpoints:
+
+```bash
+cd backend
+AWS_STACK_NAME=<your-stack-name> AWS_REGION=<your-region> make aws-deployed-smoke
+```
+
+The Makefile resolves these CloudFormation outputs automatically:
+
+- `HttpApiUrl`
+- `WebSocketApiUrl`
+
+It then runs the ignored deployed smoke test in `backend/tests/aws_local_smoke.rs` against:
+
+- `POST <HttpApiUrl>/auth/register`
+- `wss://.../prod?token=...` on the deployed `$default` websocket route
+
+If you prefer to bypass CloudFormation output resolution, provide the endpoints directly:
+
+```bash
+cd backend
+SMOKE_AUTH_BASE_URL=https://.../auth SMOKE_CHAT_WS_URL=wss://.../prod make aws-deployed-smoke
+```
+
+## Remaining Work
+
+1. Run the deployed smoke path against a real AWS stack and keep it in the release checklist.
 2. Decide whether to provide a local API Gateway Management API shim for full websocket fan-out during local invocation.
 3. Add CI/CD and observability for the AWS target.
 4. Update frontend production env vars for deployed AWS endpoints.

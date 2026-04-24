@@ -34,6 +34,8 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 ## 🟢 Completed Recently
 
+- 2026-04-24: Added a deployed AWS smoke harness that reuses the working SAM-local auth and websocket round-trip flow, with a Makefile target that can resolve `HttpApiUrl` and `WebSocketApiUrl` from CloudFormation outputs.
+   Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Chat API](component-details/chat-api.md)
 - 2026-04-24: Added explicit local startup preflight checks so missing DynamoDB Local or SAM build output fail early with actionable messages instead of surfacing as misleading browser-side errors.
    Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Chat API](component-details/chat-api.md)
 - 2026-04-24: Added a one-command local Docker Compose profile (`docker compose up --build`) for frontend + direct Axum backend bring-up to reduce onboarding friction.

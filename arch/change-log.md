@@ -1,5 +1,17 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 29)
+
+- Added a deployed AWS smoke harness by reusing `backend/tests/aws_local_smoke.rs` for both SAM-local and deployed endpoints.
+- Added `make aws-deployed-smoke`, which can consume explicit smoke endpoints or resolve `HttpApiUrl` and `WebSocketApiUrl` from CloudFormation outputs via `AWS_STACK_NAME` and `AWS_REGION`.
+- Scope reviewed: `backend/tests/aws_local_smoke.rs`, `backend/Makefile`, `README.md`, `infra/aws/README.md`, `arch/README.md`, `arch/system-overview.md`, `arch/component-details/aws-serverless-platform.md`, `arch/component-details/build-runtime-tooling.md`, `arch/next-steps.md`, `arch/risks.md`, and `arch/drift.md`.
+- Trigger signal: change-volume gate triggered (8 files changed, including test/runtime tooling and deployment validation workflow updates).
+- Stable vs changed: production target and highest-risk themes remained stable; the release-validation path improved because deployed AWS smoke testing is now executable instead of only recommended.
+- Re-ranked top 1-3 architecture actions remain:
+	1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+	2. CI/CD + observability + rollback baseline
+	3. Broader chat/reconnect integration and regression tests
+
 ## 2026-04-24 (update 28)
 
 - Ran an explicit architecture sync after the local startup-hardening changes in `backend/Makefile`.

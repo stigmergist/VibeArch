@@ -32,7 +32,7 @@ This wiki is the architecture source of truth for the repository.
 ## NFR And Deployability Snapshot
 
 - NFR status summary: 🟢 good in flexibility/input validation/modularity, 🟡 watch in availability/resilience/performance/scalability/security/manageability/portability/cost/robustness/reliability/fault tolerance/testability/maintainability/privacy and data protection/usability/accessibility, 🔴 weak in observability.
-- Deployability today: strong for the supported AWS-local development path and materially closer to the target AWS runtime because local auth and websocket flows now run through the shared Lambda-oriented handlers; production still lacks CI/CD, observability, secrets handling, and deployed validation.
+- Deployability today: strong for the supported AWS-local development path and materially closer to the target AWS runtime because local auth and websocket flows now run through the shared Lambda-oriented handlers. A deployed AWS smoke harness now exists, but production still lacks CI/CD, observability, secrets handling, and repeated deployed validation in release operations.
 - Details and evidence: see `system-overview.md`, `risks.md`, and `drift.md`.
 
 ## Scan First (Traffic Light)
@@ -55,6 +55,7 @@ This wiki is the architecture source of truth for the repository.
 
 ## Completed Recently
 
+- 2026-04-24: Added a deployed AWS smoke harness that reuses the local SAM auth and websocket round-trip flow, with a Makefile target that can resolve stack outputs from CloudFormation.
 - 2026-04-24: Hardened the SAM-local startup path in `backend/Makefile` with explicit DynamoDB reachability and SAM build-artifact checks so local dependency failures stop early with actionable messages.
 - 2026-04-23: Validated the SAM-local auth path end to end from the browser, added a local websocket smoke test, and removed remaining local-runtime assumptions from the shared handler path.
 - 2026-04-23: Chose AWS serverless as the production target and documented the migration gap from the current process-local Axum runtime.

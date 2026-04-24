@@ -41,6 +41,7 @@ Primary implementation: `compose.aws-local.yaml`, `docker-compose.yml`, `fronten
 ## Recent Evidence
 
 - `backend/Makefile` now includes `require-local-dynamodb` and `require-sam-build` so `make local-aws-dev`, `make sam-local-api`, and `make sam-local-ws-gateway` fail with actionable setup messages when local prerequisites are missing.
+- `backend/Makefile` now also includes `make aws-deployed-smoke`, which can resolve `HttpApiUrl` and `WebSocketApiUrl` from CloudFormation outputs or accept explicit smoke endpoints.
 - `docker-compose.yml` plus `backend/src/main.rs` provide a one-command convenience runtime for frontend + direct Axum backend bring-up without changing the AWS-parity validation path.
 
 ## Open Questions

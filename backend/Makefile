@@ -8,7 +8,7 @@ LOCAL_GATEWAY_PORT ?= 3001
 CARGO_LAMBDA ?= $(HOME)/.cargo/bin/cargo-lambda
 DYNAMODB_LOCAL_ENDPOINT ?= http://127.0.0.1:8001
 
-.PHONY: help docker-local-up docker-local-down local-aws-start local-aws-dev local-aws-down require-local-dynamodb require-sam-build
+.PHONY: help docker-local-up docker-local-down local-aws-start local-aws-dev local-aws-down require-local-dynamodb require-sam-build aws-deployed-smoke
 
 help:
 	@echo "Common local targets:"
@@ -18,6 +18,7 @@ help:
 	@echo "  make local-aws-start  # bootstrap DynamoDB + init + SAM build"
 	@echo "  make local-aws-down   # stop local DynamoDB"
 	@echo "  make sam-local-smoke  # run local websocket/auth smoke test"
+	@echo "  make aws-deployed-smoke # run deployed AWS auth/websocket smoke test"
 
 docker-local-up:
 	docker compose -f "$(CURDIR)/../docker-compose.yml" up --build
@@ -95,6 +96,37 @@ sam-local-ws-disconnect:
 
 sam-local-smoke:
 	cargo test --test aws_local_smoke -- --ignored --nocapture
+
+aws-deployed-smoke:
+	@AUTH_URL="$$SMOKE_AUTH_BASE_URL"; \
+	WS_URL="$$SMOKE_CHAT_WS_URL"; \
+	if [ -z "$$AUTH_URL" ] || [ -z "$$WS_URL" ]; then \
+		command -v aws >/dev/null 2>&1 || { \
+			echo "aws CLI is required when SMOKE_AUTH_BASE_URL and SMOKE_CHAT_WS_URL are not set."; \
+			exit 1; \
+		}; \
+		[ -n "$$AWS_STACK_NAME" ] || { \
+			echo "AWS_STACK_NAME must be set when smoke endpoints are not provided explicitly."; \
+			exit 1; \
+		}; \
+		[ -n "$$AWS_REGION" ] || { \
+			echo "AWS_REGION must be set when smoke endpoints are not provided explicitly."; \
+			exit 1; \
+		}; \
+		AUTH_URL="`aws cloudformation describe-stacks --stack-name "$$AWS_STACK_NAME" --region "$$AWS_REGION" --query "Stacks[0].Outputs[?OutputKey=='HttpApiUrl'].OutputValue | [0]" --output text`"; \
+		WS_URL="`aws cloudformation describe-stacks --stack-name "$$AWS_STACK_NAME" --region "$$AWS_REGION" --query "Stacks[0].Outputs[?OutputKey=='WebSocketApiUrl'].OutputValue | [0]" --output text`"; \
+		[ -n "$$AUTH_URL" ] && [ "$$AUTH_URL" != "None" ] || { \
+			echo "Could not resolve HttpApiUrl from stack $$AWS_STACK_NAME."; \
+			exit 1; \
+		}; \
+		[ -n "$$WS_URL" ] && [ "$$WS_URL" != "None" ] || { \
+			echo "Could not resolve WebSocketApiUrl from stack $$AWS_STACK_NAME."; \
+			exit 1; \
+		}; \
+		AUTH_URL="$$AUTH_URL/auth"; \
+	fi; \
+	echo "Running deployed smoke test against $$AUTH_URL and $$WS_URL"; \
+	SMOKE_AUTH_BASE_URL="$$AUTH_URL" SMOKE_CHAT_WS_URL="$$WS_URL" cargo test --test aws_local_smoke deployed_aws_auth_and_websocket_round_trip -- --ignored --nocapture
 
 build-AuthFunction:
 	"$(HOME)/.cargo/bin/cargo" +stable lambda build --release --bin auth --target aarch64-unknown-linux-gnu

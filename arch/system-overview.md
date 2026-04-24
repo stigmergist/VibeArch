@@ -33,6 +33,7 @@
 
 - Users open the React app, register or log in over HTTP, then connect over WebSocket with a fixed-lifetime session token.
 - The supported local backend path runs the auth API through SAM and websocket traffic through the local gateway, both backed by the shared AWS-oriented handler code.
+- The deployed validation path now reuses that same round-trip contract against AWS by resolving `HttpApiUrl` and `WebSocketApiUrl` outputs and running the shared smoke test flow against the real handlers.
 - Local startup tooling now performs explicit dependency checks for DynamoDB reachability and SAM build output before launching the SAM API or local websocket gateway.
 - Shared handler code tracks users, sessions, and active connection IDs in DynamoDB or DynamoDB Local.
 - Local gateway keeps only transient in-process socket senders so it can emulate the API Gateway Management API fan-out surface.
@@ -77,7 +78,7 @@ flowchart LR
 
 | Quality | Status | Evidence | Top Remediation |
 |---|---|---|---|
-| Availability | 🟡 watch | Auth/session/connection state now persists in DynamoDB on the supported path, but there is still no message durability, no deployed AWS validation, and no production operations baseline. | Add deployed smoke tests and define graceful failure/recovery strategy for the serverless path. |
+| Availability | 🟡 watch | Auth/session/connection state now persists in DynamoDB on the supported path, and a deployed smoke harness exists, but there is still no message durability and no production operations baseline. | Run deployed smoke validation in release operations and define graceful failure/recovery strategy for the serverless path. |
 | Performance | 🟡 watch | Fan-out still posts sequentially across stored connection IDs; frame/shape limits exist but no throughput profiling or rate limiting is present. | Add per-connection rate limiting and measure serverless fan-out latency under load. |
 | Scalability | 🟡 watch | Local Axum runtime is still single-process, but the AWS path now persists connection/session state in DynamoDB and fans out through the API Gateway Management API. | Validate serverless fan-out behavior under load and decide whether a single-room scan-based design remains acceptable. |
 | Security | 🟡 watch | Register/login/logout, fixed session expiry, server-owned sender identity, configured origin allowlist, and token-gated websocket access exist, but rate limiting, token rotation, and stronger production secrets policy are still absent. | Add per-connection/auth rate limiting and decide whether token rotation or stronger session storage is required. |
@@ -88,7 +89,7 @@ flowchart LR
 | Resilience | 🟡 watch | Backend cleanup is exception-safe, but the client has no reconnect/backoff logic and there are no automated failure-injection tests for disconnect/restart scenarios. | Add client reconnect/backoff policy and backend/frontend resilience tests around restart and disconnect behavior. |
 | Robustness | 🟡 watch | Invalid payloads are handled safely, but the wire contract is still implicit/unversioned and the app has no persisted recovery state. | Define a versioned message schema and add contract tests for malformed/edge-case inputs. |
 | Modularity | 🟢 good | Frontend and backend are cleanly separated, and backend responsibilities are split across transport, validation, and connection-management code paths. | Preserve module boundaries while adding auth, config, and scaling adapters. |
-| Reliability | 🟡 watch | Core local chat flow works in a single process, and the AWS path now persists auth/session/connection state, but clients still do not reconnect automatically and the serverless path lacks end-to-end deployment validation. | Add reconnect behavior and automated regression tests for the serverless flow. |
+| Reliability | 🟡 watch | Core local chat flow works in a single process, the AWS path now persists auth/session/connection state, and a deployed smoke harness exists, but clients still do not reconnect automatically and deployed validation is not yet institutionalized in release checks. | Add reconnect behavior and enforce automated regression and deployed smoke tests for the serverless flow. |
 | Fault Tolerance | 🟡 watch | Handler failures no longer imply identity-state loss on the supported path, but websocket fan-out and local gateway behavior still lack redundancy or graceful degradation definitions. | Define failover behavior and add tests around partial fan-out and stale connection cleanup. |
 | Observability | 🔴 weak | Only basic logger calls exist for rejected payloads and unexpected exceptions; no structured logs, metrics, tracing, or alerting are present. | Add structured logging, connection/error metrics, and alerting hooks. |
 | Testability | 🟡 watch | Backend auth lifecycle coverage now exists in `backend/tests/auth_lifecycle.rs`, but broader websocket/chat regression coverage, frontend integration tests, and CI execution are still absent. | Extend tests to chat/reconnect paths and run them in CI. |
@@ -114,13 +115,13 @@ flowchart LR
 - Observability baseline (structured logs, metrics, alerting).
 - Rollback/release strategy and environment promotion model.
 - Capacity planning and load profile for websocket fan-out behavior.
-- Production validation for the DynamoDB-backed Lambda path, including local `sam local` verification and deployed smoke tests.
+- Production validation for the DynamoDB-backed Lambda path as a repeated operational check, not just an available smoke harness.
 
 ### Recommended Target And Smallest Path To Production
 
 - Target model: S3 + CloudFront frontend plus API Gateway and Lambda for auth/chat, backed by DynamoDB for persistent state.
 - Smallest path:
-	1. Validate the shared Lambda path through the existing SAM-local workflow and deployed AWS smoke tests.
+	1. Validate the shared Lambda path through the existing SAM-local workflow and repeated deployed AWS smoke runs.
 	2. Add CI pipeline, SAM validation/deploy path, and deployment-time environment injection conventions.
 	3. Add structured logging, metrics, and alarms for Lambda and API Gateway.
 	4. Define scale/cost guardrails for sequential websocket fan-out and API Gateway connection-minute usage.

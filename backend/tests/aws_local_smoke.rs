@@ -12,6 +12,21 @@ const CHAT_WS_URL: &str = "ws://127.0.0.1:3001/ws/chat";
 #[tokio::test]
 #[ignore = "requires the SAM-local auth API, local websocket gateway, and DynamoDB local to be running"]
 async fn sam_local_auth_and_websocket_round_trip() {
+    run_smoke_round_trip(AUTH_BASE_URL, CHAT_WS_URL).await;
+}
+
+#[tokio::test]
+#[ignore = "requires deployed AWS auth and websocket endpoints via SMOKE_AUTH_BASE_URL and SMOKE_CHAT_WS_URL"]
+async fn deployed_aws_auth_and_websocket_round_trip() {
+    let auth_base_url = std::env::var("SMOKE_AUTH_BASE_URL")
+        .expect("SMOKE_AUTH_BASE_URL must be set for the deployed AWS smoke test");
+    let chat_ws_url =
+        std::env::var("SMOKE_CHAT_WS_URL").expect("SMOKE_CHAT_WS_URL must be set for the deployed AWS smoke test");
+
+    run_smoke_round_trip(&auth_base_url, &chat_ws_url).await;
+}
+
+async fn run_smoke_round_trip(auth_base_url: &str, chat_ws_url: &str) {
     let username = format!(
         "smoke-{}",
         SystemTime::now()
@@ -24,7 +39,7 @@ async fn sam_local_auth_and_websocket_round_trip() {
     let client = Client::new();
 
     let response = client
-        .post(format!("{AUTH_BASE_URL}/register"))
+        .post(format!("{auth_base_url}/register"))
         .json(&serde_json::json!({
             "username": username,
             "password": password,
@@ -40,7 +55,7 @@ async fn sam_local_auth_and_websocket_round_trip() {
         .as_str()
         .expect("register response should include a token");
 
-    let (mut socket, _) = connect_async(format!("{CHAT_WS_URL}?token={token}"))
+    let (mut socket, _) = connect_async(format!("{chat_ws_url}?token={token}"))
         .await
         .expect("websocket should connect with the session token");
 

@@ -107,6 +107,24 @@ make sam-local-smoke
 
 This registers a fresh user against the local SAM auth API, connects to the local websocket gateway with the returned token, sends a chat message, and asserts the echoed chat envelope.
 
+### 3b. Run the deployed AWS smoke test
+
+After deploying the SAM stack to AWS, run the same register-connect-send-receive flow against the deployed handlers:
+
+```bash
+cd backend
+AWS_STACK_NAME=<your-stack-name> AWS_REGION=<your-region> make aws-deployed-smoke
+```
+
+This resolves `HttpApiUrl` and `WebSocketApiUrl` from the CloudFormation stack outputs and runs the deployed smoke case against `/auth/register` plus the `$default` websocket route.
+
+If you already know the endpoints, you can also provide them directly:
+
+```bash
+cd backend
+SMOKE_AUTH_BASE_URL=https://.../auth SMOKE_CHAT_WS_URL=wss://.../prod make aws-deployed-smoke
+```
+
 ### 4. Start frontend (new terminal)
 
 ```bash
@@ -153,6 +171,7 @@ Current implementation status:
 
 Build prerequisite:
 - `backend/Makefile` expects `cargo-lambda` to be installed for Linux `bootstrap` builds.
+- `make aws-deployed-smoke` uses the `aws` CLI when stack outputs are resolved automatically from `AWS_STACK_NAME` and `AWS_REGION`.
 
 Local/AWS backend shape:
 - Local auth API: `sam local start-api`

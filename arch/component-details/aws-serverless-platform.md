@@ -9,7 +9,7 @@
 
 ## Scope
 
-Primary implementation target: `infra/aws/README.md`, `infra/aws/template.yaml`, `infra/aws/env.local.json`, `backend/src/aws_lambda.rs`, `backend/src/bin/*.rs`, `backend/tests/aws_local_smoke.rs`
+Primary implementation target: `infra/aws/README.md`, `infra/aws/template.yaml`, `infra/aws/env.local.json`, `backend/src/aws_lambda.rs`, `backend/src/bin/*.rs`, `backend/tests/aws_local_smoke.rs`, `backend/Makefile`
 
 ## Responsibilities
 
@@ -33,11 +33,11 @@ Primary implementation target: `infra/aws/README.md`, `infra/aws/template.yaml`,
 ## Risks And Gaps
 
 - API Gateway WebSocket pricing still includes connection-minute cost, so “pay only when used” is approximate rather than zero-idle.
-- The shared Lambda path now persists auth/session/connection state, performs API Gateway fan-out, and runs locally through SAM plus the websocket gateway shim, but CI/CD, secrets management, observability, and deployed AWS validation are still incomplete.
+- The shared Lambda path now persists auth/session/connection state, performs API Gateway fan-out, and runs locally through SAM plus the websocket gateway shim. A deployed smoke harness now exists, but CI/CD, secrets management, observability, and repeated deployed AWS validation are still incomplete.
 
 ## Recommended Actions
 
-1. Validate the deployed AWS path with smoke tests that mirror the now-working SAM-local auth and websocket flow, including the `$default` websocket route.
+1. Run the deployed AWS smoke path regularly in release validation so the implemented harness becomes an operational guardrail rather than a one-off test.
 2. Finalize production env vars and public domain topology for `VITE_CHAT_WS_URL` and `VITE_AUTH_BASE_URL`.
 3. Add CloudWatch logs, metrics, alarms, and rollout/rollback procedures.
 4. Add CI/CD and secrets handling for the AWS deployment path.
@@ -45,6 +45,7 @@ Primary implementation target: `infra/aws/README.md`, `infra/aws/template.yaml`,
 ## Recent Evidence
 
 - `backend/tests/aws_local_smoke.rs` now exercises register plus websocket message round-trip against the local SAM auth API and local websocket gateway.
+- `backend/tests/aws_local_smoke.rs` now also includes a deployed AWS smoke case driven by `SMOKE_AUTH_BASE_URL` and `SMOKE_CHAT_WS_URL`, and `backend/Makefile` can resolve those from CloudFormation outputs via `make aws-deployed-smoke`.
 - Browser validation succeeded against `http://127.0.0.1:3000/auth/*`, `ws://127.0.0.1:3001/ws/chat`, and the Vite frontend on `http://127.0.0.1:5173`.
 - `backend/src/aws_lambda.rs` now normalizes SAM-local logical table names and local DynamoDB/websocket defaults so the shared handlers run through the same code path locally and in AWS.
 - `backend/Makefile`, `compose.aws-local.yaml`, and `infra/aws/env.local.json` now define the supported local AWS workflow rather than a separate backend runtime.
