@@ -1,5 +1,17 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 28)
+
+- Ran an explicit architecture sync after the local startup-hardening changes in `backend/Makefile`.
+- Updated the wiki to reflect the new DynamoDB reachability and SAM build-artifact preflight checks, plus the refined assumption that `make local-aws-dev` is now a supported convenience launcher for the AWS-parity local backend path.
+- Scope reviewed: `backend/Makefile`, `docker-compose.yml`, `backend/src/main.rs`, `README.md`, `arch/README.md`, `arch/system-overview.md`, `arch/next-steps.md`, `arch/drift.md`, and `arch/component-details/build-runtime-tooling.md`.
+- Gate result: change-volume gate not triggered for this sync pass because the remaining architecture delta was documentation alignment around already-landed local tooling behavior.
+- Stable vs changed: production target, top risks, and global architecture priorities stayed stable; local developer ergonomics and failure clarity improved.
+- Re-ranked top 1-3 architecture actions remain:
+	1. Deployed AWS path validation (smoke coverage beyond local SAM)
+	2. CI/CD + observability + rollback baseline
+	3. Broader chat/reconnect integration and regression tests
+
 ## 2026-04-24 (update 27)
 
 - Added `docker-compose.yml` for one-command local bring-up (`docker compose up --build`) with frontend dev server + direct Axum backend container.

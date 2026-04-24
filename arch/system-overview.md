@@ -33,6 +33,7 @@
 
 - Users open the React app, register or log in over HTTP, then connect over WebSocket with a fixed-lifetime session token.
 - The supported local backend path runs the auth API through SAM and websocket traffic through the local gateway, both backed by the shared AWS-oriented handler code.
+- Local startup tooling now performs explicit dependency checks for DynamoDB reachability and SAM build output before launching the SAM API or local websocket gateway.
 - Shared handler code tracks users, sessions, and active connection IDs in DynamoDB or DynamoDB Local.
 - Local gateway keeps only transient in-process socket senders so it can emulate the API Gateway Management API fan-out surface.
 - Backend enforces an origin allowlist for auth requests and WebSocket upgrades where that path is active.
@@ -68,7 +69,8 @@ flowchart LR
 ## Assumptions
 
 - Development environment uses `localhost` with frontend on `5173`, SAM local auth on `3000`, websocket gateway on `3001`, and DynamoDB Local on `8001`.
-- Frontend, SAM local auth, websocket gateway, and DynamoDB Local are launched separately during local development.
+- AWS-parity local development can be launched either as separate steps or via `make local-aws-dev` after the required local prerequisites are installed.
+- `docker compose up --build` remains a convenience runtime for onboarding speed rather than the AWS-parity validation path.
 - Message timestamps are generated server-side in UTC ISO-8601 format.
 
 ## NFR Scorecard

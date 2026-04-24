@@ -4,7 +4,7 @@
 
 - Reliability perception risk: users can still experience broken sessions after disconnects because reconnect behavior is not yet in place.
 - Release confidence risk: production readiness claims can still outpace evidence until deployed AWS validation, CI checks, and observability are complete.
-- Support and onboarding risk: documentation and runtime wording mismatches (for example session persistence language) increase confusion and operational friction.
+- Support and onboarding risk: the convenience local runtime and the AWS-parity local runtime now coexist, so their intended uses must stay clearly documented to avoid incorrect validation assumptions.
 
 ## Scan First (Traffic Light)
 
@@ -55,6 +55,7 @@
 - Intended: production deployability should be repeatable and automated.
   - Observed: repository now has `infra/aws/template.yaml`, a working local SAM workflow, a local websocket gateway, and shared Lambda handlers inside `backend/`; the old direct local backend path is no longer the supported runtime, but production still lacks deploy automation, secrets handling, and real AWS deployment validation.
   - Observed (extended 2026-04-24): `docker-compose.yml` now provides a one-command local profile (`docker compose up --build`) for onboarding speed using frontend dev server + direct Axum backend (`backend/src/main.rs`).
+  - Observed (extended 2026-04-24): `backend/Makefile` now performs explicit preflight checks for local DynamoDB reachability and SAM build artifacts before launching the SAM-local API or websocket gateway.
   - Caveat: this compose profile is a convenience runtime and not the AWS-parity validation path.
   - Impact: the supported local backend path now matches the AWS-oriented code path, but production rollout remains incomplete.
   - Proposed correction: standardize SAM build/deploy automation, add CI-backed validation, and run deployed smoke tests.

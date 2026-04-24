@@ -55,6 +55,7 @@ This wiki is the architecture source of truth for the repository.
 
 ## Completed Recently
 
+- 2026-04-24: Hardened the SAM-local startup path in `backend/Makefile` with explicit DynamoDB reachability and SAM build-artifact checks so local dependency failures stop early with actionable messages.
 - 2026-04-23: Validated the SAM-local auth path end to end from the browser, added a local websocket smoke test, and removed remaining local-runtime assumptions from the shared handler path.
 - 2026-04-23: Chose AWS serverless as the production target and documented the migration gap from the current process-local Axum runtime.
 - 2026-04-23: Implemented the first DynamoDB-backed Lambda auth/session/connection flow and added a SAM local workflow for the shared backend crate.
