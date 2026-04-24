@@ -15,8 +15,8 @@ This wiki is the architecture source of truth for the repository.
 
 ## Scope
 
-- Code zone: repository root except `arch/`
-- Knowledge zone: `arch/`
+- Code zone: repository root except `.arch/`
+- Knowledge zone: `.arch/`
 
 ## Current System Snapshot
 

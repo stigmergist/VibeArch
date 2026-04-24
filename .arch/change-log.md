@@ -1,5 +1,19 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 34)
+
+- Migrated the architecture wiki folder from `arch/` to `.arch/` to improve discoverability, reduce accidental edits, and align with hidden knowledge-zone conventions.
+- Updated all references in `.github/copilot-instructions.md`, project `README.md`, and `.arch/README.md` to use `.arch/` instead of `arch/`.
+- Renamed the folder using `git mv` to preserve history and links.
+- Validated that all navigation, scope, and cross-links in the architecture wiki now reference `.arch/` (except for historical entries in the change log and audit trails).
+- Scope reviewed: `.github/copilot-instructions.md`, `README.md`, `.arch/README.md`, and all navigation/index files in `.arch/`.
+- Trigger signal: user request for migration, 3+ core files changed, and knowledge-zone boundary update.
+- Stable vs changed: all architecture knowledge and navigation is now in `.arch/`; no content or structure was lost, and all historical references remain for auditability.
+- Re-ranked top 1-3 architecture actions remain:
+	1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+	2. CI/CD + alarm routing + rollback baseline
+	3. Message-retention, privacy, and capacity guardrails for the new persisted history path
+
 ## 2026-04-24 (update 33)
 
 - Synced the wiki after adding persisted chat history and lazy backward pagination.

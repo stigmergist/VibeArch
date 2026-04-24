@@ -8,7 +8,7 @@ A minimal real-time chat application with:
 
 - `frontend/` React chat UI
 - `backend/` shared Rust backend crate for the Lambda auth and websocket handlers
-- `arch/` architecture wiki and decision log
+- `.arch/` (hidden) architecture wiki and decision log
 
 ## Run locally
 

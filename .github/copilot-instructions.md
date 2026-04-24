@@ -1,12 +1,12 @@
 # Copilot Workspace Instructions: LLM-Wiki Architecture Loop
 
-Purpose: Keep a living architecture knowledge base in arch based on the current codebase, and use that knowledge base to guide implementation quality.
+Purpose: Keep a living architecture knowledge base in .arch based on the current codebase, and use that knowledge base to guide implementation quality.
 
 ## Global operating model
 
 Treat this repo as having two zones:
-- Code zone: workspace root, excluding arch
-- Knowledge zone: arch directory
+- Code zone: workspace root, excluding .arch
+- Knowledge zone: .arch directory
 
 Primary behavior:
 1. Start from user and business outcomes, then observe the code zone.
@@ -33,11 +33,11 @@ Rules:
 
 When building architecture knowledge from code:
 - Include: all files in workspace root and subdirectories.
-- Exclude: arch/**.
+- Exclude: .arch/**.
 - Exclude generated or dependency folders when present (for example: node_modules, dist, build, .next, .venv, __pycache__).
 
 When enforcing architecture during implementation:
-- Read and follow docs in arch/** first.
+- Read and follow docs in .arch/** first.
 - If architecture and requested change conflict, call out the conflict and propose the smallest architecture-compliant path.
 - If no compliant path exists, propose an Architecture Decision Record update before implementing a violating design.
 
@@ -56,7 +56,7 @@ Copilot should maintain these files in arch when missing, and keep them updated 
 - arch/change-log.md: dated summary of wiki updates.
 
 If a file already exists, update in place and preserve human-authored sections whenever possible.
-If a component is identified in `arch/components.md`, it should also have a corresponding file in `arch/component-details/` unless there is a documented reason not to.
+If a component is identified in `.arch/components.md`, it should also have a corresponding file in `.arch/component-details/` unless there is a documented reason not to.
 
 ## Update triggers
 
@@ -72,7 +72,7 @@ For normal implementation requests, do a lightweight architecture conformance ch
 
 Trigger an architecture refresh when code change volume crosses the threshold below, even if the user did not explicitly ask for architecture work.
 
-Refresh gate signals (outside `arch/`):
+Refresh gate signals (outside `.arch/`):
 - 5 or more files changed, or
 - 200 or more net changed lines, or
 - Any change to runtime boundaries, API contracts, persistence model, auth/session logic, deployment topology, or build/release pipeline.
@@ -80,9 +80,9 @@ Refresh gate signals (outside `arch/`):
 Use the gate to reassess customer impact and delivery risk, not just code churn.
 
 When the gate is triggered:
-1. Re-scan code-zone changes since the last architecture refresh recorded in `arch/change-log.md`.
-2. Re-validate and update `arch/next-steps.md`, `arch/risks.md`, and `arch/drift.md` based on current evidence.
-3. Append an entry to `arch/change-log.md` with:
+1. Re-scan code-zone changes since the last architecture refresh recorded in `.arch/change-log.md`.
+2. Re-validate and update `.arch/next-steps.md`, `.arch/risks.md`, and `.arch/drift.md` based on current evidence.
+3. Append an entry to `.arch/change-log.md` with:
    - Trigger signal(s) and change volume summary
    - Scope reviewed (modules/files)
    - What changed vs what remained stable
@@ -93,34 +93,34 @@ If the gate is not triggered, continue with lightweight architecture conformance
 ## Required workflow
 
 For architecture sync tasks:
-1. Identify customer/business outcomes first, then scan code outside arch to detect structure, boundaries, dependencies, and runtime patterns that affect those outcomes.
-2. Update the architecture wiki files in arch.
-   - Update `arch/next-steps.md` so recommended actions live in a dedicated index rather than being embedded only inside summary docs.
-   - Ensure each identified component has a matching `arch/component-details/<component-slug>.md` file.
-   - Ensure `arch/components.md` stays high-level and focuses on concise component summaries plus relationship descriptions between components.
-   - Ensure `arch/components.md` links to each component detail file, and each component detail file links back to `arch/components.md`, `arch/next-steps.md`, and relevant related components/docs.
-3. Record key changes in arch/change-log.md with date and short rationale.
+1. Identify customer/business outcomes first, then scan code outside .arch to detect structure, boundaries, dependencies, and runtime patterns that affect those outcomes.
+2. Update the architecture wiki files in .arch.
+   - Update `.arch/next-steps.md` so recommended actions live in a dedicated index rather than being embedded only inside summary docs.
+   - Ensure each identified component has a matching `.arch/component-details/<component-slug>.md` file.
+   - Ensure `.arch/components.md` stays high-level and focuses on concise component summaries plus relationship descriptions between components.
+   - Ensure `.arch/components.md` links to each component detail file, and each component detail file links back to `.arch/components.md`, `.arch/next-steps.md`, and relevant related components/docs.
+3. Record key changes in .arch/change-log.md with date and short rationale.
 4. Record any uncertainty or inferred assumptions explicitly.
-5. Re-assess non-functional qualities and deployability implications; update arch/risks.md and arch/drift.md when gaps are found.
-6. Re-validate any embedded "what to do next" / "next steps" suggestions across arch docs against current code and assumptions; remove stale items, adjust priorities, and add evidence notes for changed recommendations.
-   - Move actionable recommendations out of incidental prose where practical and into `arch/next-steps.md` plus the relevant `arch/component-details/<component-slug>.md` files.
-   - Re-rank global actions in `arch/next-steps.md` and component-local actions in each component detail file.
+5. Re-assess non-functional qualities and deployability implications; update .arch/risks.md and .arch/drift.md when gaps are found.
+6. Re-validate any embedded "what to do next" / "next steps" suggestions across .arch docs against current code and assumptions; remove stale items, adjust priorities, and add evidence notes for changed recommendations.
+   - Move actionable recommendations out of incidental prose where practical and into `.arch/next-steps.md` plus the relevant `.arch/component-details/<component-slug>.md` files.
+   - Re-rank global actions in `.arch/next-steps.md` and component-local actions in each component detail file.
    - Check that component relationships are cross-linked where useful for navigation.
 7. Apply mandatory visibility cues for scanability in every architecture update/refresh/sync:
-   - Ensure `arch/README.md`, `arch/system-overview.md`, `arch/risks.md`, and `arch/drift.md` each contain a `## Scan First (Traffic Light)` section.
+   - Ensure `.arch/README.md`, `.arch/system-overview.md`, `.arch/risks.md`, and `.arch/drift.md` each contain a `## Scan First (Traffic Light)` section.
    - In each `Scan First` section, include exactly 3 bullets in this order: 🔴 Act now, 🟡 Watch closely, 🟢 Stable base.
-   - Ensure `arch/next-steps.md` contains a `## Priority Legend` and traffic-light section headers for priority groups (🔴, 🟡, 🟢).
+   - Ensure `.arch/next-steps.md` contains a `## Priority Legend` and traffic-light section headers for priority groups (🔴, 🟡, 🟢).
    - Keep traffic-light cues concise and action-oriented so a reader can identify top attention areas in under 10 seconds.
 
 For code generation tasks:
 1. Confirm the user-facing outcome and value first.
-2. Read arch/README.md and relevant architecture docs.
+2. Read .arch/README.md and relevant architecture docs.
 3. Generate code that aligns with documented boundaries and constraints.
 4. If introducing a new component or boundary, update architecture docs in the same change.
 
 For architecture weakness analysis tasks:
-1. Read architecture docs in arch.
-2. Compare against observed code (excluding arch).
+1. Read architecture docs in .arch.
+2. Compare against observed code (excluding .arch).
 3. Report weaknesses as a prioritized list with:
    - Business/customer impact
    - Recommended action and urgency
@@ -129,7 +129,7 @@ For architecture weakness analysis tasks:
    - Evidence
    - Suggested remediation
    - Suggested owner and urgency
-4. Add or update entries in arch/risks.md and arch/drift.md when requested or when making architecture updates.
+4. Add or update entries in .arch/risks.md and .arch/drift.md when requested or when making architecture updates.
 5. Include explicit assessment for these non-functional qualities:
    - Availability
    - Performance
@@ -195,7 +195,7 @@ Before completing any architecture sync, verify:
 
 ## Non-Functional Architecture Requirements
 
-For each architecture sync or review, include a concise NFR scorecard in the relevant docs (typically arch/system-overview.md, arch/risks.md, and arch/drift.md):
+For each architecture sync or review, include a concise NFR scorecard in the relevant docs (typically .arch/system-overview.md, .arch/risks.md, and .arch/drift.md):
 - Status per quality: good / watch / weak
 - Evidence from current code and runtime assumptions
 - Top remediation action per weak/watch quality
@@ -252,8 +252,8 @@ When unsure:
 - Prefer stable, low-entropy summaries over verbose prose.
 - Use visual structure intentionally: tables for scorecards, traffic-light icons for status, and diagrams where they improve comprehension.
 - Prefer markdown links for architecture file names, component names, and related docs when the link materially improves navigation.
-- `arch/components.md` should stay concise and high-level: list components, summarize their relationships, and link to the per-component detail files.
-- `arch/next-steps.md` should serve as the top-level action index; `arch/component-details/*.md` should hold per-component detail and local actions rather than repeating the full global list.
-- Treat arch as the architecture source of truth for implementation guidance.
-- Treat code outside arch as the source of truth for what currently exists.
+- `.arch/components.md` should stay concise and high-level: list components, summarize their relationships, and link to the per-component detail files.
+- `.arch/next-steps.md` should serve as the top-level action index; `.arch/component-details/*.md` should hold per-component detail and local actions rather than repeating the full global list.
+- Treat .arch as the architecture source of truth for implementation guidance.
+- Treat code outside .arch as the source of truth for what currently exists.
 - Continuously reconcile differences through documented decisions, risks, and drift notes.
