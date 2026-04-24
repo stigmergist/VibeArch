@@ -1,5 +1,19 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 27)
+
+- Added `docker-compose.yml` for one-command local bring-up (`docker compose up --build`) with frontend dev server + direct Axum backend container.
+- Updated `backend/Dockerfile` to build and run the direct Axum binary in a compose-friendly local runtime image.
+- Added `backend/src/main.rs` so the backend crate now exposes a runnable local binary (`simple-chat-backend`) for the compose profile.
+- Updated local tooling/docs: new `make docker-local-up` and `make docker-local-down` in `backend/Makefile`, plus README quick-start guidance.
+- Scope reviewed: `backend/src/main.rs`, `backend/Makefile`, `docker-compose.yml`, `README.md`, `arch/system-overview.md`, `arch/README.md`, `arch/drift.md`, and `arch/next-steps.md`.
+- Trigger signal: change-volume gate triggered (8+ files changed and local runtime boundary expanded with a new compose path).
+- Stable vs changed: production target and top deployment risks stayed stable; local onboarding/runtime ergonomics improved with a documented convenience profile.
+- Re-ranked top 1-3 architecture actions remain:
+	1. Deployed AWS path validation (smoke coverage beyond local SAM)
+	2. CI/CD + observability + rollback baseline
+	3. Broader chat/reconnect integration and regression tests
+
 ## 2026-04-24 (update 26)
 
 - Resolved documentation drift for auth/session wording in `README.md` so it now reflects the supported DynamoDB-backed SAM/AWS session path instead of "in-memory session token" phrasing.

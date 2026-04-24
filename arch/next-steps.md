@@ -34,6 +34,8 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 ## 🟢 Completed Recently
 
+- 2026-04-24: Added a one-command local Docker Compose profile (`docker compose up --build`) for frontend + direct Axum backend bring-up to reduce onboarding friction.
+   Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Frontend UI](component-details/frontend-ui.md), [Chat API](component-details/chat-api.md)
 - 2026-04-23: Added `backend/tests/aws_local_smoke.rs`, a `make sam-local-smoke` target, and browser-validated the Vite frontend against the SAM-local auth API plus websocket gateway.
    Related components: [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Frontend UI](component-details/frontend-ui.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 - 2026-04-23: Implemented DynamoDB-backed Lambda auth/session/connection handling and API Gateway fan-out in the shared `backend/` crate.

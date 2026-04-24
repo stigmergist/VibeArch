@@ -12,7 +12,28 @@ A minimal real-time chat application with:
 
 ## Run locally
 
-The only supported local backend path is the AWS-targeted local stack.
+The recommended AWS-parity local backend path is the SAM-targeted local stack.
+
+### Docker Compose (single command)
+
+For a fast local run in one command:
+
+```bash
+docker compose up --build
+```
+
+Then open `http://localhost:5173`.
+
+Stop it with:
+
+```bash
+docker compose down
+```
+
+Notes:
+- This compose profile runs the frontend dev server plus a direct Axum backend container (`backend/src/main.rs`) on `http://localhost:8000`.
+- This is intended for quick local usage and onboarding convenience.
+- The SAM-local + websocket-gateway path below remains the AWS-parity validation path.
 
 ### 1. Install local prerequisites
 
@@ -29,6 +50,29 @@ cargo install cargo-lambda
 cd backend
 make local-dynamodb-up
 make local-dynamodb-init
+```
+
+### Fast Path (repeat runs)
+
+Backend in one terminal:
+
+```bash
+cd backend
+make local-aws-dev
+```
+
+Frontend in a second terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+To stop local DynamoDB when done:
+
+```bash
+cd backend
+make local-aws-down
 ```
 
 ### 3. Build and start the local AWS stack

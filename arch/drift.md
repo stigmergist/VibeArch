@@ -54,6 +54,8 @@
 
 - Intended: production deployability should be repeatable and automated.
   - Observed: repository now has `infra/aws/template.yaml`, a working local SAM workflow, a local websocket gateway, and shared Lambda handlers inside `backend/`; the old direct local backend path is no longer the supported runtime, but production still lacks deploy automation, secrets handling, and real AWS deployment validation.
+  - Observed (extended 2026-04-24): `docker-compose.yml` now provides a one-command local profile (`docker compose up --build`) for onboarding speed using frontend dev server + direct Axum backend (`backend/src/main.rs`).
+  - Caveat: this compose profile is a convenience runtime and not the AWS-parity validation path.
   - Impact: the supported local backend path now matches the AWS-oriented code path, but production rollout remains incomplete.
   - Proposed correction: standardize SAM build/deploy automation, add CI-backed validation, and run deployed smoke tests.
 

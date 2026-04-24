@@ -15,6 +15,7 @@
 
 - Frontend runtime: browser, served by Vite dev server (`frontend/`).
 - Supported local backend runtime: DynamoDB Local, `sam local start-api`, and the local websocket gateway in `backend/src/bin/local_gateway.rs`.
+- Additional local convenience runtime: `docker-compose.yml` can run frontend + direct Axum backend (`backend/src/main.rs`) for one-command local bring-up.
 - Shared backend module: `backend/src/aws_lambda.rs` plus shared auth/validation code in `backend/src/lib.rs`.
 - Optional local-only library runtime: `backend/src/lib.rs` still contains Axum-based app wiring used by tests and shared logic, but it is not the supported local backend entrypoint.
 - Persistence: DynamoDB in AWS and DynamoDB Local for the supported local backend path.

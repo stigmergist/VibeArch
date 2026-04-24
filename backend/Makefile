@@ -6,23 +6,55 @@ SAM_ENV_VARS ?= $(CURDIR)/../infra/aws/env.local.json
 SAM_EVENTS_DIR ?= $(CURDIR)/../infra/aws/events
 LOCAL_GATEWAY_PORT ?= 3001
 CARGO_LAMBDA ?= $(HOME)/.cargo/bin/cargo-lambda
+DYNAMODB_LOCAL_ENDPOINT ?= http://127.0.0.1:8001
+
+.PHONY: help docker-local-up docker-local-down local-aws-start local-aws-dev local-aws-down require-local-dynamodb require-sam-build
+
+help:
+	@echo "Common local targets:"
+	@echo "  make docker-local-up   # full local stack via docker compose (backend + frontend)"
+	@echo "  make docker-local-down # stop full docker local stack"
+	@echo "  make local-aws-dev    # start DynamoDB + SAM API + websocket gateway"
+	@echo "  make local-aws-start  # bootstrap DynamoDB + init + SAM build"
+	@echo "  make local-aws-down   # stop local DynamoDB"
+	@echo "  make sam-local-smoke  # run local websocket/auth smoke test"
+
+docker-local-up:
+	docker compose -f "$(CURDIR)/../docker-compose.yml" up --build
+
+docker-local-down:
+	docker compose -f "$(CURDIR)/../docker-compose.yml" down
 
 local-dynamodb-up:
 	docker compose -f "$(CURDIR)/../compose.aws-local.yaml" up -d
 
+require-local-dynamodb:
+	@curl --silent --show-error --output /dev/null --max-time 2 "$(DYNAMODB_LOCAL_ENDPOINT)" || { \
+		echo "Local DynamoDB is not reachable at $(DYNAMODB_LOCAL_ENDPOINT)."; \
+		echo "Start it with 'make local-dynamodb-up' and initialize tables with 'make local-dynamodb-init'."; \
+		exit 1; \
+	}
+
+require-sam-build:
+	@test -f "$(SAM_BUILT_TEMPLATE)" || { \
+		echo "SAM build output is missing at $(SAM_BUILT_TEMPLATE)."; \
+		echo "Run 'make sam-build' before starting the local API."; \
+		exit 1; \
+	}
+
 local-dynamodb-down:
 	docker compose -f "$(CURDIR)/../compose.aws-local.yaml" down
 
-local-dynamodb-init:
+local-dynamodb-init: require-local-dynamodb
 	AWS_REGION="us-east-1" AWS_ACCESS_KEY_ID="local" AWS_SECRET_ACCESS_KEY="local" DYNAMODB_ENDPOINT="http://127.0.0.1:8001" cargo run --bin local_dynamodb_init
 
 sam-build:
 	"$(SAM)" build -t "$(SAM_TEMPLATE)"
 
-sam-local-api:
+sam-local-api: require-sam-build require-local-dynamodb
 	"$(SAM)" local start-api -t "$(SAM_BUILT_TEMPLATE)" --env-vars "$(SAM_ENV_VARS)"
 
-sam-local-ws-gateway:
+sam-local-ws-gateway: require-local-dynamodb
 	WEBSOCKET_MANAGEMENT_ENDPOINT="http://127.0.0.1:$(LOCAL_GATEWAY_PORT)" \
 	DYNAMODB_ENDPOINT="http://127.0.0.1:8001" \
 	AWS_REGION="us-east-1" \
@@ -35,6 +67,22 @@ local-aws-up:
 	@echo "1. make local-dynamodb-up && make local-dynamodb-init"
 	@echo "2. make sam-build && make sam-local-api"
 	@echo "3. make sam-local-ws-gateway"
+
+local-aws-start: local-dynamodb-up require-local-dynamodb local-dynamodb-init sam-build
+	@echo "Local AWS prerequisites are ready."
+
+local-aws-dev: local-aws-start
+	@/bin/bash -c '\
+		set -e; \
+		echo "Starting SAM local API and websocket gateway..."; \
+		$(MAKE) --no-print-directory sam-local-api & API_PID=$$!; \
+		$(MAKE) --no-print-directory sam-local-ws-gateway & WS_PID=$$!; \
+		trap "kill $$API_PID $$WS_PID 2>/dev/null || true" INT TERM EXIT; \
+		wait $$API_PID $$WS_PID \
+	'
+
+local-aws-down: local-dynamodb-down
+	@echo "Local DynamoDB stopped."
 
 sam-local-ws-connect:
 	"$(SAM)" local invoke WebSocketConnectFunction -t "$(SAM_BUILT_TEMPLATE)" --env-vars "$(SAM_ENV_VARS)" --event "$(SAM_EVENTS_DIR)/ws-connect.json"

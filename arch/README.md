@@ -26,6 +26,7 @@ This wiki is the architecture source of truth for the repository.
 - Auth/session: `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, fixed-lifetime bearer sessions, and token-authenticated WebSocket chat on `/ws/chat`
 - Persistence: the supported backend path persists users, sessions, and connection IDs in DynamoDB or DynamoDB Local
 - Supported local backend path: DynamoDB Local + `sam local start-api` + `cargo run --bin local_gateway`
+- Additional local convenience path: `docker compose up --build` runs frontend + direct Axum backend for one-command bring-up
 - Production target direction: AWS serverless with static frontend hosting plus Lambda-backed auth and chat integrations
 
 ## NFR And Deployability Snapshot
