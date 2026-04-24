@@ -4,19 +4,17 @@ use aws_credential_types::Credentials;
 use aws_sdk_apigatewaymanagement::{primitives::Blob, Client as ApiGatewayManagementClient};
 use aws_sdk_dynamodb::{types::AttributeValue, Client as DynamoDbClient};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use lambda_http::{http::StatusCode, Body, Error, Request, RequestExt, Response};
 use pbkdf2::pbkdf2_hmac_array;
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 
 use crate::{
-    telemetry,
-    DEFAULT_SESSION_TTL_SECONDS, MAX_FRAME_BYTES, MAX_SENDER_CHARS, MAX_TEXT_CHARS,
-    MAX_USERNAME_CHARS, MIN_PASSWORD_CHARS,
+    runtime_contract, telemetry, MAX_SENDER_CHARS, MAX_USERNAME_CHARS, MIN_PASSWORD_CHARS,
 };
 
 const PASSWORD_HASH_BYTES: usize = 32;
@@ -591,7 +589,7 @@ pub async fn handle_ws_send_message(
     };
 
     let body = request.body.unwrap_or_default();
-    match parse_and_validate(&body) {
+    match runtime_contract::parse_and_validate_chat_text(&body) {
         Ok(Some(text)) => {
             let text_len = text.chars().count();
             telemetry.record_message_accepted();
@@ -689,42 +687,24 @@ pub fn authenticate_user(user: &UserRecord, payload: &LoginRequest) -> Result<()
 }
 
 pub fn new_session_record(user: &UserRecord) -> SessionRecord {
+    let session_policy = runtime_contract::SessionPolicy::from_env()
+        .expect("SESSION_TTL_SECONDS must be configured with a positive integer");
+
+    new_session_record_with_policy(user, session_policy)
+}
+
+pub fn new_session_record_with_policy(
+    user: &UserRecord,
+    session_policy: runtime_contract::SessionPolicy,
+) -> SessionRecord {
     let mut raw_token = [0_u8; 32];
     OsRng.fill_bytes(&mut raw_token);
     SessionRecord {
         token: URL_SAFE_NO_PAD.encode(raw_token),
         username: user.username.clone(),
         display_name: user.display_name.clone(),
-        expires_at: (Utc::now() + Duration::seconds(DEFAULT_SESSION_TTL_SECONDS)).to_rfc3339(),
+        expires_at: session_policy.expires_at().to_rfc3339(),
     }
-}
-
-pub fn parse_and_validate(raw: &str) -> Result<Option<String>, &'static str> {
-    if raw.as_bytes().len() > MAX_FRAME_BYTES {
-        return Err("Frame exceeds maximum allowed size (4096 bytes).");
-    }
-
-    let data: Value =
-        serde_json::from_str(raw).map_err(|_| "Malformed JSON - message was not delivered.")?;
-    let object = data.as_object().ok_or("Payload must be a JSON object.")?;
-
-    if object.contains_key("sender") {
-        return Err("Field 'sender' is server-owned and must not be sent by clients.");
-    }
-
-    let raw_text = object
-        .get("text")
-        .and_then(Value::as_str)
-        .ok_or("Field 'text' must be a string.")?;
-    let text = raw_text.trim();
-    if text.is_empty() {
-        return Ok(None);
-    }
-    if text.chars().count() > MAX_TEXT_CHARS {
-        return Err("Message text exceeds 1000 characters.");
-    }
-
-    Ok(Some(text.to_string()))
 }
 
 async fn register(request: Request) -> Result<Response<Body>, Error> {
@@ -1151,9 +1131,11 @@ fn resolve_table_name(
 #[cfg(test)]
 mod tests {
     use super::{
-        authenticate_user, new_session_record, new_user_record, parse_and_validate, LoginRequest,
+        authenticate_user, new_session_record_with_policy, new_user_record, LoginRequest,
         RegisterRequest,
     };
+    use crate::runtime_contract;
+    use chrono::{DateTime, Duration, Utc};
 
     #[test]
     fn register_record_normalizes_fields() {
@@ -1189,7 +1171,9 @@ mod tests {
 
     #[test]
     fn parse_and_validate_rejects_sender_field() {
-        let result = parse_and_validate(r#"{"sender":"alice","text":"hello"}"#);
+        let result = runtime_contract::parse_and_validate_chat_text(
+            r#"{"sender":"alice","text":"hello"}"#,
+        );
         assert_eq!(
             result.unwrap_err(),
             "Field 'sender' is server-owned and must not be sent by clients."
@@ -1197,7 +1181,7 @@ mod tests {
     }
 
     #[test]
-    fn new_session_record_sets_expiry() {
+    fn new_session_record_uses_supplied_policy() {
         let user = new_user_record(RegisterRequest {
             username: "alice".to_string(),
             password: "password123".to_string(),
@@ -1205,9 +1189,17 @@ mod tests {
         })
         .unwrap();
 
-        let session = new_session_record(&user);
+        let session = new_session_record_with_policy(
+            &user,
+            runtime_contract::SessionPolicy::from_ttl_seconds(90).unwrap(),
+        );
+        let expires_at = DateTime::parse_from_rfc3339(&session.expires_at)
+            .unwrap()
+            .with_timezone(&Utc);
+
         assert_eq!(session.username, "alice");
         assert!(!session.token.is_empty());
-        assert!(!session.expires_at.is_empty());
+        assert!(expires_at > Utc::now() + Duration::seconds(85));
+        assert!(expires_at < Utc::now() + Duration::seconds(95));
     }
 }

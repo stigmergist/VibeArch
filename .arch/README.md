@@ -37,9 +37,9 @@ This wiki is the architecture source of truth for the repository.
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: deployed AWS validation, CI/CD enforcement, and local-to-AWS auth/origin policy parity are the main launch-confidence risks.
-- 🟡 Watch closely: reliability and delivery speed still depend on tuned thresholds, history-pagination regression coverage, and reducing duplicated policy logic across runtime paths.
-- 🟢 Stable base: input validation, server-owned sender identity, persisted recent conversation history, preflight local runtime checks, and baseline service monitoring are in a good state.
+- 🔴 Act now: deployed AWS validation, CI/CD enforcement, and explicit AWS websocket origin policy controls are the main launch-confidence risks.
+- 🟡 Watch closely: reliability and delivery speed still depend on tuned thresholds, history-pagination regression coverage, and reducing oversized runtime modules.
+- 🟢 Stable base: input validation and session-expiry policy now run through one shared backend path, and parity tests cover local and AWS runtime behavior.
 
 ## Recommended Action Index
 

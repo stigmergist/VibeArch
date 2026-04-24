@@ -11,9 +11,9 @@ This file records known architecture risks, NFR hotspots, anti-patterns, and sup
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: R-013 (deployed AWS path not yet validated consistently), R-017 (local and AWS auth/origin policy drift), and R-008 (CI/CD still missing) are the most direct customer-trust and incident-recovery risks.
-- 🟡 Watch closely: R-006, R-009, R-010, R-015, and R-018 can still amplify regressions, support burden, or cost surprises because history replay, monitoring, and runtime policy logic are not yet enforced end to end.
-- 🟢 Stable base: R-001, R-002, R-005, and the monitoring baseline portion of R-009 are mitigated enough to reduce blind spots.
+- 🔴 Act now: R-013 (deployed AWS path not yet validated consistently), R-017 (remaining websocket-origin policy drift), and R-008 (CI/CD still missing) are the most direct customer-trust and incident-recovery risks.
+- 🟡 Watch closely: R-006, R-009, R-010, R-015, and R-018 can still amplify regressions, support burden, or cost surprises because history replay, monitoring, and large runtime modules remain partially unresolved.
+- 🟢 Stable base: R-001, R-002, R-005, and the session/validation parity portion of R-017 are now mitigated enough to reduce blind spots.
 
 | ID    | Risk                                                                                                                                                                                                                                        | Quality Area                                                           | Severity | Likelihood | Mitigation                                                                                                                      | Owner            |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
@@ -33,8 +33,8 @@ This file records known architecture risks, NFR hotspots, anti-patterns, and sup
 | R-014 | AWS API Gateway WebSocket pricing adds connection-minute cost, so the pay-per-use expectation can be misunderstood                                                                                                                          | Cost                                                                   | Medium   | Medium     | Model expected concurrent usage and set CloudWatch budgets/alarms before production rollout                                     | Platform owner   |
 | R-015 | Recent conversation history now persists and replays into the UI, but message-retention policy, privacy rules, and read/write capacity guardrails for the `Messages` table are still undefined                                           | Privacy and Data Protection, Cost, Availability, Usability             | Medium   | Medium     | Define retention/privacy policy, validate history query load, and add table capacity/cost monitoring                           | Platform owner   |
 | R-016 | Supply chain vulnerabilities detected in backend (Rust) and frontend (Node.js) dependencies. Rust: 3 moderate advisories in `rustls-webpki` (transitive via AWS SDK). Node.js: 5 moderate advisories in `vite`, `esbuild`, `vitest`. | Security, Reliability, Manageability                                   | Medium   | Medium     | Schedule dependency upgrades for backend and frontend; monitor for upstream fixes in AWS SDK and major package updates.         | Platform owner   |
-| R-017 | Local and AWS auth/session policy is not yet consistent: `backend/src/lib.rs` enforces `ALLOWED_ORIGINS` and configurable `SESSION_TTL_SECONDS`, but `backend/src/aws_lambda.rs` still mints sessions with the default TTL and accepts websocket connects based on token presence without equivalent app-level origin enforcement. | Security, Privacy and Data Protection, Reliability, Portability        | Medium   | Medium     | Centralize session/origin policy in shared helpers or explicit gateway controls and add parity regression coverage.            | Platform owner   |
-| R-018 | Runtime responsibilities are concentrating in large files and duplicated policy code (`backend/src/aws_lambda.rs`, `backend/src/lib.rs`, `frontend/src/App.jsx`), increasing the chance of local/AWS drift and making changes harder to test safely. | Maintainability, Testability, Reliability, Robustness                  | Medium   | Medium     | Extract shared auth/validation/session helpers and thinner frontend/runtime modules before further protocol growth.            | Full-stack owner |
+| R-017 | Local and AWS policy parity is improved by shared validation and session TTL helpers, but websocket origin enforcement still differs: local checks in-handler while AWS currently relies on edge controls. | Security, Privacy and Data Protection, Reliability, Portability        | Medium   | Medium     | Keep shared policy helpers and parity tests, and add explicit API Gateway/WAF websocket-origin enforcement plus validation evidence. | Platform owner   |
+| R-018 | Runtime responsibilities are still concentrating in large files (`backend/src/aws_lambda.rs`, `backend/src/lib.rs`, `frontend/src/App.jsx`), increasing change risk even after duplicated validation/session policy was extracted. | Maintainability, Testability, Reliability, Robustness                  | Medium   | Medium     | Continue modular decomposition of runtime/UI orchestration and keep parity tests for shared policy boundaries.                 | Full-stack owner |
 
 ## NFR Hotspots
 
@@ -59,7 +59,7 @@ The system's main exposure is at the websocket boundary: on the AWS path, authen
 | Browser → WebSocket (connect) | Bearer token in query string | AWS path: app-level origin not enforced | 🔴 High |
 | WebSocket → message frame | Chat message JSON | Validated; rate limiting absent | 🟡 Medium |
 | Lambda → DynamoDB | Session, message, connection reads/writes | No gap identified | 🟢 Low |
-| Deployment config | Env vars and SAM template | Session TTL hardcoded on AWS path | 🟡 Medium |
+| Deployment config | Env vars and SAM template | TTL parity now shared; websocket-origin control still not explicit on AWS path | 🟡 Medium |
 
 ## Supply Chain Vulnerability Evidence (2026-04-24)
 

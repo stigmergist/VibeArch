@@ -22,12 +22,11 @@ use axum::{
     Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use futures::{SinkExt, StreamExt};
 use pbkdf2::pbkdf2_hmac_array;
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 use tokio::sync::{
@@ -38,6 +37,7 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{error, warn};
 
 pub mod aws_lambda;
+pub mod runtime_contract;
 pub mod telemetry;
 
 pub const MAX_FRAME_BYTES: usize = 4_096;
@@ -74,15 +74,7 @@ pub struct Settings {
 
 impl Settings {
     pub fn from_env() -> Result<Self, String> {
-        let ttl_raw = env::var("SESSION_TTL_SECONDS")
-            .unwrap_or_else(|_| DEFAULT_SESSION_TTL_SECONDS.to_string());
-        let session_ttl_seconds = ttl_raw
-            .trim()
-            .parse::<i64>()
-            .map_err(|_| "SESSION_TTL_SECONDS must be an integer.".to_string())?;
-        if session_ttl_seconds <= 0 {
-            return Err("SESSION_TTL_SECONDS must be greater than zero.".to_string());
-        }
+        let session_ttl_seconds = runtime_contract::SessionPolicy::from_env()?.ttl_seconds();
 
         let origins_raw =
             env::var("ALLOWED_ORIGINS").unwrap_or_else(|_| DEFAULT_ALLOWED_ORIGINS.join(","));
@@ -311,7 +303,9 @@ impl SessionStore {
             token: token.clone(),
             username: user.username.clone(),
             display_name: user.display_name.clone(),
-            expires_at: Utc::now() + Duration::seconds(self.session_ttl_seconds),
+            expires_at: runtime_contract::SessionPolicy::from_ttl_seconds(self.session_ttl_seconds)
+                .expect("session ttl should be validated at startup")
+                .expires_at(),
         };
         self.sessions.insert(token, identity.clone());
         identity
@@ -709,7 +703,7 @@ async fn websocket_session(
                     break;
                 }
 
-                match parse_and_validate(&raw) {
+                match runtime_contract::parse_and_validate_chat_text(&raw) {
                     Ok(Some(text)) => {
                         let text_len = text.chars().count();
                         state.telemetry.record_message_accepted();
@@ -861,34 +855,6 @@ fn validate_password(raw: &str) -> Result<String, String> {
 
 fn hash_password(password: &str, salt: &[u8; 16]) -> [u8; PASSWORD_HASH_BYTES] {
     pbkdf2_hmac_array::<Sha256, PASSWORD_HASH_BYTES>(password.as_bytes(), salt, PASSWORD_ITERATIONS)
-}
-
-fn parse_and_validate(raw: &str) -> Result<Option<String>, &'static str> {
-    if raw.as_bytes().len() > MAX_FRAME_BYTES {
-        return Err("Frame exceeds maximum allowed size (4096 bytes).");
-    }
-
-    let data: Value =
-        serde_json::from_str(raw).map_err(|_| "Malformed JSON — message was not delivered.")?;
-    let object = data.as_object().ok_or("Payload must be a JSON object.")?;
-
-    if object.contains_key("sender") {
-        return Err("Field 'sender' is server-owned and must not be sent by clients.");
-    }
-
-    let raw_text = object
-        .get("text")
-        .and_then(Value::as_str)
-        .ok_or("Field 'text' must be a string.")?;
-    let text = raw_text.trim();
-    if text.is_empty() {
-        return Ok(None);
-    }
-    if text.chars().count() > MAX_TEXT_CHARS {
-        return Err("Message text exceeds 1000 characters.");
-    }
-
-    Ok(Some(text.to_string()))
 }
 
 fn header_value(headers: &HeaderMap, name: axum::http::header::HeaderName) -> Option<String> {

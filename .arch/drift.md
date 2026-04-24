@@ -11,9 +11,9 @@ This file tracks gaps between the intended architecture and what the code curren
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: deployed AWS validation, local-to-AWS auth/origin policy drift, and retention-policy/alarm-routing gaps still separate intended production readiness from current evidence.
-- 🟡 Watch closely: message contract evolution, deployment automation, duplicated runtime-policy logic, and full accessibility verification remain partially resolved and user-impacting.
-- 🟢 Stable base: sender ownership, payload validation, safe cleanup behavior, persisted recent history, baseline monitoring, and local runtime preflight checks are aligned with intended architecture.
+- 🔴 Act now: deployed AWS validation, local-to-AWS websocket-origin policy drift, and retention-policy/alarm-routing gaps still separate intended production readiness from current evidence.
+- 🟡 Watch closely: message contract evolution, deployment automation, and full accessibility verification remain partially resolved and user-impacting.
+- 🟢 Stable base: sender ownership, shared payload/session policy, safe cleanup behavior, persisted recent history, baseline monitoring, and local runtime preflight checks are aligned with intended architecture.
 
 ## Quality Status Snapshot
 
@@ -26,7 +26,8 @@ This file tracks gaps between the intended architecture and what the code curren
   - Observed (resolved 2026-04-23): frontend now reads `VITE_CHAT_WS_URL` in `frontend/src/App.jsx` and falls back to the local default when unset.
   - Observed (extended 2026-04-23): frontend now also supports explicit `VITE_AUTH_BASE_URL` override for AWS deployments where auth and websocket endpoints differ.
   - Observed (extended 2026-04-23): backend local/helper runtime reads `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings.
-  - Remaining gap: `backend/src/aws_lambda.rs` still mints sessions with `DEFAULT_SESSION_TTL_SECONDS` rather than shared `SESSION_TTL_SECONDS`, and deployment-time env injection conventions beyond the current frontend socket/auth contract remain incomplete.
+  - Observed (resolved 2026-04-24): local and AWS runtime session creation now share `SessionPolicy` in `backend/src/runtime_contract.rs`, so `SESSION_TTL_SECONDS` is evaluated through one implementation path.
+  - Remaining gap: deployment-time env injection conventions beyond the current frontend socket/auth contract remain incomplete.
   - Status: 🟡 partially resolved.
 
 - Intended: trust-boundary controls should stay consistent between the supported local path and the deployed AWS path.
@@ -36,10 +37,9 @@ This file tracks gaps between the intended architecture and what the code curren
   - Status: 🟡 partially resolved.
 
 - Intended: payload validation and session policy should have one shared implementation path.
-  - Observed: `parse_and_validate()` exists in both `backend/src/lib.rs` and `backend/src/aws_lambda.rs`, and session TTL policy differs between those runtime paths.
-  - Impact: future message-contract or auth-policy changes can land in one runtime and silently miss the other.
-  - Proposed correction: extract shared validation/session helpers plus parity tests that exercise both local and AWS handlers.
-  - Status: 🔴 unresolved.
+  - Observed (resolved 2026-04-24): `backend/src/runtime_contract.rs` now owns `parse_and_validate_chat_text()` and `SessionPolicy`, and both `backend/src/lib.rs` and `backend/src/aws_lambda.rs` call the shared helpers.
+  - Observed (resolved 2026-04-24): `backend/tests/runtime_parity.rs` now verifies local websocket validation behavior and local-vs-AWS session TTL parity.
+  - Status: 🟢 fully resolved.
 
 - Intended: sender identity should be server-owned after authentication.
   - Observed (resolved 2026-04-23): `POST /auth/register` and `POST /auth/login` now mint fixed-expiry session tokens, `WS /ws/chat` requires `?token=...`, and the shared backend path rejects any client-supplied `sender` while stamping outbound messages from the authenticated display name.
@@ -76,9 +76,9 @@ This file tracks gaps between the intended architecture and what the code curren
   - Proposed correction: standardize SAM build/deploy automation, add CI-backed validation, and run deployed smoke tests.
 
 - Intended: component boundaries should stay small enough that policy changes can be made once and verified safely.
-  - Observed: `backend/src/aws_lambda.rs` is 1,213 lines, `backend/src/lib.rs` is 955 lines, and `frontend/src/App.jsx` is 414 lines, with auth, transport, history, validation, and UX orchestration increasingly concentrated in those files.
+  - Observed: `backend/src/aws_lambda.rs` is 1,190 lines, `backend/src/lib.rs` is 921 lines, and `frontend/src/App.jsx` is 414 lines, with auth, transport, history, and UX orchestration still concentrated in those files.
   - Impact: maintenance cost and regression risk rise because future changes are more likely to create runtime-specific drift or broad retest needs.
-  - Proposed correction: extract shared policy modules and thinner UI/runtime slices before adding more protocol or deployment features.
+  - Proposed correction: continue thinning UI/runtime orchestration files while preserving the new shared policy module and parity coverage.
   - Status: 🟡 partially resolved.
 
 - Intended: production backend billing should align closely with real usage through AWS Lambda.

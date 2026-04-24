@@ -24,7 +24,7 @@ sequenceDiagram
    U->>F: Submit message
    F->>G: Send JSON { text }
    G->>L: Invoke $default handler
-   L->>L: Validate via parse_and_validate()
+   L->>L: Validate via parse_and_validate_chat_text()
    L->>D: Persist accepted message
    L->>D: Scan active connections
    L-->>G: Post outbound envelopes
@@ -73,7 +73,7 @@ sequenceDiagram
 
 1. User submits message in frontend composer.
 2. Frontend sends JSON payload: `{ text: string }`.
-3. Gateway forwards the text frame to the shared `$default` handler, which passes it to `parse_and_validate()`.
+3. Gateway forwards the text frame to the shared `$default` handler, which passes it to `parse_and_validate_chat_text()` in `backend/src/runtime_contract.rs`.
 4. If validation fails, backend rejects the frame; the exact error-envelope behavior differs between the local Axum helper path and the Lambda-oriented websocket path.
 5. If `text` is blank after strip, frame is silently discarded; loop continues.
 6. Backend persists the normalized message event, then broadcasts it to all connected clients, stamping sender from the authenticated session:
@@ -93,7 +93,7 @@ sequenceDiagram
 
    F->>G: Send malformed/oversized/invalid frame
    G->>L: Forward websocket message event
-   L->>L: parse_and_validate() rejects payload
+   L->>L: parse_and_validate_chat_text() rejects payload
    Note over L: Other clients receive nothing
 ```
 
@@ -123,5 +123,5 @@ sequenceDiagram
 
 - Frontend <-> Backend boundary: HTTP JSON auth endpoints plus WebSocket JSON chat protocol.
 - Frontend runtime config boundary: `VITE_CHAT_WS_URL` must resolve to the websocket gateway or deployed WebSocket API; `VITE_AUTH_BASE_URL` may explicitly point at the matching auth API.
-- Backend runtime config boundary: `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings define auth, persistence, history pagination, and local routing behavior, but the AWS handler path does not yet consume all of that policy uniformly.
+- Backend runtime config boundary: `ALLOWED_ORIGINS`, `SESSION_TTL_SECONDS`, AWS table names, and local AWS endpoint settings define auth, persistence, history pagination, and local routing behavior. Session TTL parity now runs through shared runtime helpers; websocket-origin policy still differs between local in-handler checks and AWS edge controls.
 - External systems: DynamoDB Local for supported local runs and DynamoDB/API Gateway in AWS.

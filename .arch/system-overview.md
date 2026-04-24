@@ -10,9 +10,9 @@ This file describes what the system is trying to do, where its boundaries sit, a
 
 ## Scan First (Traffic Light)
 
-- 🔴 Act now: deployed AWS validation, local-to-AWS auth/origin policy parity, and alarm routing remain the key blockers for launch confidence.
-- 🟡 Watch closely: reliability, resilience, and delivery speed are still constrained by missing CI/CD, untuned alert thresholds, duplicated policy logic, and non-local release enforcement for deployed smoke validation.
-- 🟢 Stable base: auth/session guardrails, payload validation, backend modular separation, baseline CloudWatch visibility, and durable recent-history replay are in place.
+- 🔴 Act now: deployed AWS validation, AWS websocket origin-policy enforcement, and alarm routing remain the key blockers for launch confidence.
+- 🟡 Watch closely: reliability, resilience, and delivery speed are still constrained by missing CI/CD, untuned alert thresholds, and non-local release enforcement for deployed smoke validation.
+- 🟢 Stable base: auth/session guardrails and payload validation now share one runtime contract module used in both local and AWS paths.
 
 ## Boundaries
 
@@ -41,6 +41,7 @@ This file describes what the system is trying to do, where its boundaries sit, a
 - Shared handler code tracks users, sessions, and active connection IDs in DynamoDB or DynamoDB Local.
 - Local gateway keeps only transient in-process socket senders so it can emulate the API Gateway Management API fan-out surface.
 - Backend enforces an origin allowlist for auth requests and WebSocket upgrades where that path is active.
+- Shared runtime contract logic now centralizes websocket payload validation and session-expiry TTL calculation for both local and AWS handlers.
 - Incoming client messages are broadcast with sender identity derived from the authenticated session.
 - Backend also emits system join/leave messages.
 - Health check is exposed at `GET /health`, and now includes minimum service counters, SLO indicator ratios, and target thresholds for the local runtime.
@@ -63,12 +64,12 @@ flowchart LR
 
 - Connection lifecycle management for disconnect/reconnect.
 - Session lifecycle management for registration, login, logout, token expiry, and token validation.
-- Input validation enforced via `parse_and_validate()` (frame size, JSON parse, shape, field types, length limits).
+- Input validation and session TTL policy now run through `backend/src/runtime_contract.rs` (`parse_and_validate_chat_text()` and `SessionPolicy`) so local and AWS paths share one policy implementation.
 - Sender identity is now server-owned and rejected when supplied by clients.
 - Validation errors are rejected without being broadcast.
 - The supported local path now persists users, sessions, connections, and chat history in DynamoDB Local rather than process memory.
 - The direct Axum helper path used by local convenience tooling now keeps recent history only in process memory.
-- Local and AWS policy parity is incomplete: the local Axum path enforces `ALLOWED_ORIGINS` and configurable `SESSION_TTL_SECONDS`, while the AWS handler path still mints sessions at the default TTL and depends on edge configuration rather than in-handler websocket origin checks.
+- Local and AWS policy parity is now improved for session TTL and message validation through shared helpers; websocket origin policy still differs because AWS relies on edge controls rather than equivalent in-handler checks.
 - The current serverless fan-out design scans connection records and posts sequentially, so scale and cost need validation before broader rollout.
 
 ## Assumptions
@@ -92,19 +93,19 @@ flowchart LR
 | Availability | 🟡 watch | Auth/session/connection state and recent message history now persist in DynamoDB on the supported path, and a deployed smoke harness exists, but history retention policy and production operations baseline are still incomplete. | Run deployed smoke validation in release operations and define retention/recovery strategy for the serverless path. |
 | Performance | 🟡 watch | Fan-out still posts sequentially across stored connection IDs, and each accepted chat message now adds a DynamoDB write plus later history reads; frame/shape limits exist but no throughput profiling or rate limiting is present. | Add per-connection rate limiting and measure serverless fan-out plus history-query latency under load. |
 | Scalability | 🟡 watch | Local Axum runtime is still single-process, but the AWS path now persists connection/session state in DynamoDB and fans out through the API Gateway Management API. | Validate serverless fan-out behavior under load and decide whether a single-room scan-based design remains acceptable. |
-| Security | 🟡 watch | Register/login/logout, fixed session expiry, server-owned sender identity, configured origin allowlist, and token-gated websocket access exist, but the AWS websocket path still relies on edge settings rather than equivalent in-handler origin enforcement, the AWS session path still ignores `SESSION_TTL_SECONDS`, and rate limiting/token rotation are still absent. | Unify origin and session policy across local and AWS paths, then add rate limiting and decide whether token rotation or stronger session storage is required. |
-| Manageability | 🟡 watch | No CI workflow or operational runbook exists, and validation/session policy now lives in multiple runtime-specific files, but the backend emits consistent JSON logs and local health telemetry and the SAM stack provisions a starter CloudWatch dashboard plus alarms. | Add CI checks, alarm routing/runbooks, deployment automation, and shared runtime-policy helpers. |
+| Security | 🟡 watch | Register/login/logout, fixed session expiry, server-owned sender identity, configured origin allowlist, and token-gated websocket access exist, and TTL/validation parity now comes from a shared runtime contract, but the AWS websocket path still relies on edge settings rather than equivalent in-handler origin enforcement and rate limiting/token rotation are still absent. | Keep shared runtime policy coverage and close websocket-origin parity with explicit API Gateway/WAF controls plus validation tests. |
+| Manageability | 🟡 watch | No CI workflow or operational runbook exists, but the backend emits consistent JSON logs and local health telemetry, the SAM stack provisions a starter CloudWatch dashboard plus alarms, and shared runtime-policy helpers now reduce drift risk. | Add CI checks, alarm routing/runbooks, deployment automation, and keep parity tests mandatory for runtime-policy changes. |
 | Flexibility | 🟢 good | Clean frontend/backend split and simple protocol permit iterative change. | Preserve separation while introducing schema/versioning and env config. |
 | Portability | 🟡 watch | Frontend socket/auth URLs are environment-driven, baseline Docker packaging exists, and the same backend crate now supports Axum and Lambda execution, but deployment automation and production validation are still incomplete. | Finish AWS deployment automation and document environment injection per deployment target. |
 | Cost | 🟡 watch | Lambda can reduce always-on compute cost, but API Gateway WebSocket connection-minute billing and the new persisted message table/read path are not yet modeled. | Define AWS cost guardrails and expected connection, write, and history-read usage envelopes. |
 | Resilience | 🟡 watch | Backend cleanup is exception-safe, and the client now retries bounded reconnects with status feedback, but there are still no end-to-end restart/failure-injection checks against the deployed path. | Run reconnect and restart scenarios through CI and deployed smoke/release checks. |
-| Robustness | 🟡 watch | Invalid payloads are handled safely and recent message history now survives reconnects on the supported path, but the wire contract is still implicit/unversioned and the same validation rules are duplicated across local and AWS handlers. | Define a versioned message schema and extract shared validation helpers with parity tests for malformed and edge-case inputs. |
+| Robustness | 🟡 watch | Invalid payloads are handled safely and recent message history now survives reconnects on the supported path, and validation/session policy now share one runtime helper module, but the wire contract is still implicit/unversioned. | Define a versioned message schema and expand parity tests for malformed and edge-case inputs. |
 | Modularity | 🟢 good | Frontend and backend are cleanly separated, and backend responsibilities are split across transport, validation, and connection-management code paths. | Preserve module boundaries while adding auth, config, and scaling adapters. |
 | Reliability | 🟡 watch | Core local chat flow works in a single process, the AWS path now persists auth/session/connection state, the client now retries bounded reconnects, and a deployed smoke harness exists, but deployed validation is not yet institutionalized in release checks. | Enforce automated regression and deployed smoke tests for the serverless flow in release operations. |
 | Fault Tolerance | 🟡 watch | Handler failures no longer imply identity-state loss on the supported path, but websocket fan-out and local gateway behavior still lack redundancy or graceful degradation definitions. | Define failover behavior and add tests around partial fan-out and stale connection cleanup. |
 | Observability | 🟡 watch | The backend now emits structured JSON logs for auth, websocket, and broadcast events, the local health route exposes minimum counters and SLO indicator ratios, and the SAM stack provisions a CloudWatch dashboard plus baseline alarms, but alarm actions and threshold tuning are still absent. | Route alarms to operators and tune thresholds from deployed traffic. |
 | Testability | 🟡 watch | Backend auth lifecycle coverage now includes invalid-payload and revoked-session websocket cases, and the frontend now has Vitest-based reconnect/payload tests, but CI execution and deployed end-to-end checks are still absent. | Run frontend/backend regression suites and deployed smoke validation in CI or release automation. |
-| Maintainability | 🟡 watch | The codebase is still small and documented, but `backend/src/aws_lambda.rs`, `backend/src/lib.rs`, and `frontend/src/App.jsx` are accumulating orchestration responsibilities and some policy logic is duplicated across runtime paths. | Add CI enforcement, then extract shared auth/validation/session helpers and thinner frontend runtime modules before further protocol expansion. |
+| Maintainability | 🟡 watch | The codebase is still small and documented, and shared runtime policy helpers reduced drift, but `backend/src/aws_lambda.rs`, `backend/src/lib.rs`, and `frontend/src/App.jsx` still accumulate broad orchestration responsibilities. | Add CI enforcement, then continue runtime and UI decomposition before further protocol expansion. |
 | Privacy and Data Protection | 🟡 watch | The supported path now persists user, session, and message records in DynamoDB, and auth includes logout, expiry, and origin restrictions, but there is still no explicit privacy posture, message-retention policy, or TLS deployment requirement for production use. | Define privacy/data handling expectations, message-retention rules, and require authenticated, TLS-protected deployments. |
 | Usability | 🟡 watch | The UI now restores recent history on join and lazily loads older pages during backward scroll, but it still has no delivery-state feedback after retries are exhausted. | Decide whether history should include stronger continuity hints such as unread markers or draft preservation. |
 | Accessibility | 🟡 watch | The UI uses native form controls and now marks status/messages as live regions, but there is still no keyboard/accessibility audit and color contrast has not been verified. | Add keyboard/focus checks and an accessibility review. |
@@ -133,7 +134,7 @@ flowchart LR
 
 - Target model: S3 + CloudFront frontend plus API Gateway and Lambda for auth/chat, backed by DynamoDB for persistent state.
 - Smallest path:
-	1. Close local-to-AWS policy drift by centralizing session TTL, origin handling, and validation behavior across the shared runtime.
+	1. Keep shared session/validation policy coverage in place and close the remaining websocket-origin parity gap between local and AWS paths.
 	2. Validate the shared Lambda path through the existing SAM-local workflow and repeated deployed AWS smoke runs.
 	3. Add CI pipeline, SAM validation/deploy path, and deployment-time environment injection conventions.
 	4. Attach the new dashboards and alarms to operational routing, then tune thresholds from real traffic.

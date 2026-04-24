@@ -23,7 +23,7 @@ This file is the top-level index for recommended architecture work. Component-sp
 
 1. Prevent launch-time trust failures by validating the deployed AWS handler path with smoke tests that mirror the now-working SAM-local flow, including the `$default` websocket route and DynamoDB-backed auth/session/connection behavior.
    Related components: [Chat API](component-details/chat-api.md), [Connection Manager](component-details/connection-manager.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
-2. Prevent production-only auth and policy regressions by enforcing the same origin, session-TTL, and validation rules across the local helper path and the AWS Lambda path.
+2. Prevent production-only auth and policy regressions by enforcing the same websocket-origin controls across the local helper path and the AWS Lambda path, now that session-TTL and payload validation share one implementation path.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md), [Build And Runtime Tooling](component-details/build-runtime-tooling.md)
 3. Reduce customer-facing regressions and support churn by enforcing the growing backend and frontend regression suites in CI and extending them to the deployed serverless release flow.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
@@ -40,10 +40,13 @@ This file is the top-level index for recommended architecture work. Component-sp
    Related components: [Frontend UI](component-details/frontend-ui.md), [Frontend Styling](component-details/frontend-styling.md)
 3. Reduce deployment mistakes and onboarding friction by defining backend settings/config conventions to match the now-documented frontend env contract and the future AWS endpoint topology.
    Related components: [Build And Runtime Tooling](component-details/build-runtime-tooling.md), [Chat API](component-details/chat-api.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
-4. Reduce maintenance drag before the next protocol expansion by extracting shared auth/validation/session helpers from the growing runtime files and by thinning the frontend orchestration component.
+4. Reduce maintenance drag before the next protocol expansion by continuing to thin large runtime/UI orchestration files after the shared validation/session extraction.
    Related components: [Chat API](component-details/chat-api.md), [Payload Validator](component-details/payload-validator.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 
 ## 🟢 Completed Recently
+
+- 2026-04-24: Extracted shared runtime contract helpers so local and AWS paths now use one implementation for payload validation and session TTL policy, with new parity tests across both runtime surfaces.
+   Related components: [Payload Validator](component-details/payload-validator.md), [Chat API](component-details/chat-api.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)
 
 - 2026-04-24: Added persisted chat history plus lazy backward pagination so recent conversation restores on join and older pages load only on backward scroll.
    Related components: [Chat API](component-details/chat-api.md), [Frontend UI](component-details/frontend-ui.md), [AWS Serverless Platform](component-details/aws-serverless-platform.md)

@@ -1,5 +1,18 @@
 # Architecture Wiki Change Log
 
+## 2026-04-24 (update 38)
+
+- Ran a gate-triggered architecture sync after extracting shared runtime policy code and parity tests across local and AWS paths.
+- Updated `.arch/README.md`, `.arch/system-overview.md`, `.arch/data-flow.md`, `.arch/components.md`, `.arch/component-details/payload-validator.md`, `.arch/next-steps.md`, `.arch/risks.md`, and `.arch/drift.md` to reflect that payload validation and session TTL policy now share one implementation in `backend/src/runtime_contract.rs`.
+- Re-scoped R-017 to the remaining websocket-origin parity gap and narrowed R-018 from duplicated policy logic to oversized orchestration modules.
+- Scope reviewed: `backend/src/lib.rs`, `backend/src/aws_lambda.rs`, `backend/src/runtime_contract.rs`, `backend/tests/runtime_parity.rs`, and all updated `.arch/*.md` files listed above.
+- Trigger signal: change-volume gate triggered by >=200 net changed lines outside `.arch/` (new shared module + parity test suite).
+- Stable vs changed: message contract validation and session TTL policy parity are now stable across runtime paths; deployed AWS validation, websocket-origin parity controls, and CI/CD release enforcement remain open.
+- Re-ranked top 1-3 architecture actions now are:
+	1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+	2. CI/CD + alarm routing + rollback baseline
+	3. Explicit websocket-origin parity controls for the AWS path plus evidence-backed verification
+
 ## 2026-04-24 (update 37)
 
 - Applied new formatting standards from updated `.github/copilot-instructions.md` across all `.arch` files.

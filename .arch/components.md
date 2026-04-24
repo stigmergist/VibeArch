@@ -38,8 +38,8 @@ High-level relationships:
 ## [Payload Validator](component-details/payload-validator.md)
 
 Summary:
-- Protocol-hardening helper `parse_and_validate()` in `backend/src/lib.rs`.
-- Encodes message size, shape, type, and normalization rules before messages enter the chat flow.
+- Shared protocol-hardening helper in `backend/src/runtime_contract.rs`.
+- Encodes message size, shape, type, normalization, and session TTL policy used by both local and AWS runtime paths.
 
 High-level relationships:
 - Feeds sanitized data into [Chat API](component-details/chat-api.md).
