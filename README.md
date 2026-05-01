@@ -1,18 +1,25 @@
 # Demonstrator Application for ArchOps CoPilot idea
 
-The [.github/copilot-instructions.md](./.github/copilot-instructions.md) is the main thing of interest.
+The Copilot customisation is split across two files:
+
+| File | Role |
+|------|------|
+| [.github/copilot-instructions.md](./.github/copilot-instructions.md) | Always-on guardrails: architecture boundary enforcement, style defaults, and routing to the skill |
+| [.github/skills/llm-wiki-architecture/SKILL.md](./.github/skills/llm-wiki-architecture/SKILL.md) | On-demand workflow: full architecture sync, weakness analysis, NFR/deployability assessment, and `.arch` wiki maintenance |
 
 Here's the idea:
 - Generated code affects the non-functionals of the system—security, resilience, deployability, performance, observability
 - Architecture is fundamentally about ensuring the system has the right non-functionals.
 - So, **instead of imposing the architecture on the code, why don't we extract the implicit architecture from the code and actively fix it ?**
 
-The CoPilot instruction prompt does this:
+The always-on instructions keep routine coding prompts lightweight. The skill loads automatically when you ask to sync, review, or critique the architecture—bringing the full workflow only when it is needed.
+
+The loop:
 - Extracts the implicit architecture directly from the codebase.
-- Maintains it as a living wiki, a long-term memory that evolves as you code.
+- Maintains it as a living wiki in `.arch/`, a long-term memory that evolves as you code.
 - Uses that wiki to constrain the AI coding assistant, so generation aligns with architectural boundaries.
-- Then surfacing the next highest-value improvements based on non-functional gaps—deployability, security, resilience, observability, etc.
-- You implement the fix or force an design/architecture change by implementing code
+- Surfaces the next highest-value improvements based on non-functional gaps—deployability, security, resilience, observability, etc.
+- You implement the fix or force a design/architecture change by implementing code.
 - ...and the loop repeats...
 
 **The shift is simple but powerful**: recognise architecture is emergent, make code changes, explore the architectural effect, then guide the next change from that reality.

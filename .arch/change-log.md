@@ -1,5 +1,17 @@
 # Architecture Wiki Change Log
 
+## 2026-05-01 (update 39)
+
+- Ran a lightweight architecture sync.
+- Code-zone changes since update 38: `README.md` updated with a plain-language explanation of the ArchOps CoPilot concept (1 file, ~17 lines). No architectural boundaries, components, runtime behavior, or API contracts changed.
+- Gate: change-volume gate not triggered (1 file changed, ~17 lines, no runtime surface affected).
+- Supply chain recheck: Rust — 3 advisories in `rustls-webpki` (transitive via AWS SDK), consistent with prior scan; Node.js — 5 moderate advisories, consistent with prior scan. No new findings; R-016 evidence section remains current.
+- Architecture wiki status: all docs confirmed current; no updates required to components, risks, drift, decisions, or next-steps.
+- Re-ranked top 1-3 architecture actions remain:
+  1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+  2. CI/CD + alarm routing + rollback baseline
+  3. Explicit websocket-origin parity controls for the AWS path plus evidence-backed verification
+
 ## 2026-04-24 (update 38)
 
 - Ran a gate-triggered architecture sync after extracting shared runtime policy code and parity tests across local and AWS paths.
