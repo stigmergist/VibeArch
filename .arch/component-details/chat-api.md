@@ -1,5 +1,7 @@
 # Chat API
 
+The Chat API is the shared backend orchestration surface that owns authentication, session management, WebSocket message handling, history retrieval, and broadcast across both the supported local (SAM + DynamoDB Local) and deployed AWS paths. The most important thing to know right now is that auth/session/message persistence is working end to end locally, but deployed AWS validation, rate limiting, and message-retention policy remain the top production-readiness gaps.
+
 ## Navigation
 
 - [Architecture Home](../README.md)

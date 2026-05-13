@@ -1,5 +1,19 @@
 # Architecture Wiki Change Log
 
+## 2026-05-13 (update 40)
+
+- Ran a full architecture sync validation pass.
+- Code-zone changes since update 39: no runtime code changes. Note: update 39 under-reported the code-zone scope — the 2026-05-01 commit also restructured `.github/copilot-instructions.md` (moved the full wiki workflow into the new `.github/skills/llm-wiki-architecture/SKILL.md`) alongside the `README.md` update. No runtime boundaries, components, API contracts, or persistence model were affected.
+- Gate: change-volume gate not triggered. No runtime surface changes since update 39.
+- Supply chain recheck: `cargo audit` tool unavailable in current environment; `npm audit` confirms the same 5 moderate advisories (`esbuild`, `vite`, `vitest`) as prior scans. R-016 evidence remains current and unchanged.
+- Style corrections applied: added required opening plain-English summary paragraphs to `component-details/frontend-ui.md`, `component-details/chat-api.md`, `component-details/connection-manager.md`, `component-details/frontend-styling.md`, `component-details/build-runtime-tooling.md`, `component-details/aws-serverless-platform.md`, `data-flow.md`, and `decisions.md` — these files were previously missing the required pre-heading summary paragraph.
+- Updated `build-runtime-tooling.md` scope and recent evidence to reference the new `.github/skills/llm-wiki-architecture/SKILL.md` copilot skill file.
+- Architecture wiki status: all docs current. No runtime risk, drift, component boundary, or NFR status changes required.
+- Re-ranked top 1-3 architecture actions remain:
+  1. Deployed AWS path validation through repeated smoke runs and release checklist enforcement
+  2. CI/CD + alarm routing + rollback baseline
+  3. Explicit websocket-origin parity controls for the AWS path plus evidence-backed verification
+
 ## 2026-05-01 (update 39)
 
 - Ran a lightweight architecture sync.

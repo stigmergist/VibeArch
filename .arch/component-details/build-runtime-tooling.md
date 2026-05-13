@@ -1,5 +1,7 @@
 # Build And Runtime Tooling
 
+Build and Runtime Tooling covers all the scaffolding that lets developers run the system locally and deploy it to AWS: Docker Compose profiles, SAM workflows, Cargo manifests, Makefile targets, Vite configuration, and environment injection conventions. The most important thing to know right now is that the supported AWS-local development path has preflight checks and a smoke harness, but CI/CD and deployment automation are still missing.
+
 ## Navigation
 
 - [Architecture Home](../README.md)
@@ -9,7 +11,7 @@
 
 ## Scope
 
-Primary implementation: `compose.aws-local.yaml`, `docker-compose.yml`, `frontend/Dockerfile`, `frontend/nginx.conf`, `frontend/package.json`, `frontend/vite.config.js`, `frontend/.env.example`, `backend/Dockerfile`, `backend/Cargo.toml`, `backend/Cargo.lock`, `backend/Makefile`, `backend/src/main.rs`, `backend/src/lib.rs`, `backend/src/bin/*.rs`, `infra/aws/template.yaml`, `infra/aws/env.local.json`
+Primary implementation: `compose.aws-local.yaml`, `docker-compose.yml`, `frontend/Dockerfile`, `frontend/nginx.conf`, `frontend/package.json`, `frontend/vite.config.js`, `frontend/.env.example`, `backend/Dockerfile`, `backend/Cargo.toml`, `backend/Cargo.lock`, `backend/Makefile`, `backend/src/main.rs`, `backend/src/lib.rs`, `backend/src/bin/*.rs`, `infra/aws/template.yaml`, `infra/aws/env.local.json`, `.github/copilot-instructions.md`, `.github/skills/llm-wiki-architecture/SKILL.md`
 
 ## Responsibilities
 
@@ -51,6 +53,7 @@ Primary implementation: `compose.aws-local.yaml`, `docker-compose.yml`, `fronten
 - `infra/aws/template.yaml` and `backend/src/lib.rs` now allow the common local Vite fallback ports (`5173` through `5178`) so port shifts do not immediately break SAM-local auth CORS or the direct Axum helper origin policy.
 - `frontend/package.json`, `frontend/vite.config.js`, and `frontend/src/test/setup.js` now define a Vitest + jsdom + Testing Library frontend regression harness.
 - `backend/src/telemetry.rs` now centralizes JSON log initialization and minimum service/SLO counters shared by local and Lambda entrypoints.
+- `.github/copilot-instructions.md` was restructured (2026-05-01) into a lightweight always-on policy; the full architecture wiki workflow moved to the on-demand skill at `.github/skills/llm-wiki-architecture/SKILL.md`.
 
 ## Open Questions
 

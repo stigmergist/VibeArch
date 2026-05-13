@@ -1,5 +1,7 @@
 # Data Flow
 
+This file describes the key runtime data flows, message sequences, and integration boundaries for the VibeArch chat system. The most important thing to know right now is that the supported path (SAM + DynamoDB Local) covers the full register-to-chat sequence including history pagination, but websocket origin enforcement still differs between the local and AWS deployment paths.
+
 ## Main Chat Sequence
 
 ```mermaid

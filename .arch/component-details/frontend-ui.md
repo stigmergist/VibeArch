@@ -1,5 +1,7 @@
 # Frontend UI
 
+The frontend UI is the browser-facing React application that handles authentication, real-time chat, and conversation history. The most important thing to know right now is that bounded reconnect and progressive history loading are working, but keyboard/accessibility verification and post-retry session continuity decisions remain open.
+
 ## Navigation
 
 - [Architecture Home](../README.md)

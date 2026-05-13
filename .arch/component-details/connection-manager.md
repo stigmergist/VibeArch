@@ -1,5 +1,7 @@
 # Connection Manager
 
+The Connection Manager tracks active WebSocket client connection IDs in DynamoDB (or a transient local peer map), fans out broadcast messages to all connected clients, and cleans up stale connections on disconnect. The most important thing to know right now is that the current sequential scan-and-post fan-out model works but has not been validated under load or cost envelopes.
+
 ## Navigation
 
 - [Architecture Home](../README.md)
