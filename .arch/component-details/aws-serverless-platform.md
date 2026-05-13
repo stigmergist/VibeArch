@@ -1,5 +1,7 @@
 # AWS Serverless Platform
 
+The AWS Serverless Platform is the intended production runtime: S3 + CloudFront for the frontend, API Gateway + Lambda for auth and WebSocket chat, and DynamoDB for persistent state. The most important thing to know right now is that the Lambda handlers are implemented and locally validated through SAM, but a deployed AWS end-to-end validation run has not yet been institutionalized in release operations.
+
 ## Navigation
 
 - [Architecture Home](../README.md)

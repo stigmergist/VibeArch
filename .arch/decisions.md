@@ -1,5 +1,7 @@
 # Decisions (ADR Lite)
 
+This file records lightweight Architecture Decision Records (ADRs) for the VibeArch project. Each entry states what was decided, why, and what the consequences are. Superseded decisions are kept for traceability. The most important thing to know right now is that the current active decisions lock in AWS serverless as the production target with DynamoDB-backed state, and the message contract (ADR-005) remains intentionally unversioned pending future expansion.
+
 ## ADR-001: Use WebSocket for Chat Transport
 
 - Status: accepted

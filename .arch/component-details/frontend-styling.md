@@ -1,5 +1,7 @@
 # Frontend Styling
 
+Frontend Styling defines the visual theme, responsive layout, and presentation states for the chat UI using a single CSS file. The most important thing to know right now is that no accessibility audit has been run — color contrast, focus states, and screen-reader behavior are unverified.
+
 ## Navigation
 
 - [Architecture Home](../README.md)
